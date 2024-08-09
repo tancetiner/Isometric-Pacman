@@ -14,3 +14,11 @@ E => Horizontal left end
 U => Vertical bottom end
 D => Horizontal right end
 A => Vertical top end
+
+Indexing
+Matrix Access:
+col, row = position.x, position.y
+
+Map Position:
+x -> left - right
+y -> up - down

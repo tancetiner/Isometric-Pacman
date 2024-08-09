@@ -25,6 +25,7 @@ GameState :: struct {
 	game_map:           [GRID_HEIGHT][GRID_WIDTH]rune,
 	game_map_boolean:   [GRID_HEIGHT][GRID_WIDTH]bool,
 	tile_edit_position: Position,
+	enemies:            [4]CharacterState,
 }
 
 Position :: [2]int

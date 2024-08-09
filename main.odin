@@ -17,13 +17,17 @@ main :: proc() {
 	}
 
 	// Initialize Game State
-	gameMap, gameMapBoolean := read_map("assets/map.txt")
+	gameMap, gameMapBoolean := read_map("./assets/map.txt")
+
+	// Initialize Enemies
+	enemies: [4]CharacterState = initializeEnemies()
 
 	game_state: GameState = GameState {
 		game_mode          = GameMode.Normal,
 		game_map           = gameMap,
 		game_map_boolean   = gameMapBoolean,
 		tile_edit_position = {0, 0},
+		enemies            = enemies,
 	}
 
 	// Initialize Character State
@@ -36,8 +40,11 @@ main :: proc() {
 		direction             = Direction.Down,
 	}
 
+	// Randomly place character and enemies
+	placeCharacters(&game_state, &character_state)
+
 	// Initialize Camera
-	xPos, yPos := characterTilePositionToScreenPosition(character_state.position)
+	// xPos, yPos := characterTilePositionToScreenPosition(character_state.position)
 	camera := rl.Camera2D {
 		// rl.Vector2{WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2},
 		// rl.Vector2{xPos, yPos},
@@ -56,7 +63,7 @@ main :: proc() {
 		switch game_state.game_mode {
 		case GameMode.Normal:
 			// Update character state
-			updateCharacterState(&character_state)
+			updateCharacterAndEnemiesState(&game_state, &character_state)
 
 			// Handling Input
 			handleInput(&game_state, &character_state, &camera)

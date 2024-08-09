@@ -2,6 +2,7 @@ package main
 
 import "core:fmt"
 import "core:math"
+import "core:math/rand"
 import "core:os"
 import "core:strings"
 import "core:unicode/utf8"
@@ -96,12 +97,10 @@ characterTilePositionToScreenPosition :: proc(position: Position) -> (f32, f32) 
 	return x, y
 }
 
-
-directionToTextureIdx: map[Direction]int = {
-	Direction.Up    = 1,
-	Direction.Down  = 0,
-	Direction.Left  = 1,
-	Direction.Right = 0,
+enemyTilePositionToScreenPosition :: proc(position: Position) -> (f32, f32) {
+	x := f32(position.x - position.y) * (TEXTURE_WIDTH / 2)
+	y := f32(position.x + position.y) * (TEXTURE_HEIGHT / 4) - TEXTURE_HEIGHT / 4
+	return x, y
 }
 
 characterPoseTextureMap := map[int]rl.Rectangle {
@@ -182,12 +181,12 @@ handleCharacterMovement :: proc(
 loadTextures :: proc() -> map[string]rl.Texture2D {
 	return (map[string]rl.Texture2D) {
 		"floor" = rl.LoadTexture("assets/floor.png"),
-		"house" = rl.LoadTexture("assets/house.png"),
-		"box" = rl.LoadTexture("assets/box.png"),
-		"car" = rl.LoadTexture("assets/car.png"),
-		"stone" = rl.LoadTexture("assets/stone.png"),
 		"character_front" = rl.LoadTexture("assets/character_front.png"),
 		"character_back" = rl.LoadTexture("assets/character_back.png"),
+		"enemy_up" = rl.LoadTexture("assets/enemy_up.png"),
+		"enemy_down" = rl.LoadTexture("assets/enemy_down.png"),
+		"enemy_left" = rl.LoadTexture("assets/enemy_left.png"),
+		"enemy_right" = rl.LoadTexture("assets/enemy_right.png"),
 	}
 }
 
@@ -199,7 +198,7 @@ handleInput :: proc(
 	using rl.KeyboardKey
 
 	// Character Movement
-	isTimeToMove := character_state.movement_time_counter > MOVEMENT_FREQUENCY
+	isTimeToMove := character_state.movement_time_counter > CHARACTER_MOVEMENT_INTERVAL
 	if isTimeToMove do character_state.movement_time_counter = 0
 	character_state.action = CharacterAction.Standing
 	character_on_the_move := false
@@ -229,28 +228,6 @@ handleInput :: proc(
 		game_state.game_mode = GameMode.TileEditor
 	}
 
-	// if rl.IsKeyDown(.RIGHT) {
-	// 	if character_state.direction != Direction.Right || isTimeToMove {
-	// 		if character_state.direction != Direction.Right do character_state.movement_time_counter = 0.0
-	// 		character_state.direction = Direction.Right
-	// 		character_on_the_move = true
-	// 	}} else if rl.IsKeyDown(.LEFT) {
-	// 	if character_state.direction != Direction.Left || isTimeToMove {
-	// 		if character_state.direction != Direction.Left do character_state.movement_time_counter = 0.0
-	// 		character_state.direction = Direction.Left
-	// 		character_on_the_move = true
-	// 	}} else if rl.IsKeyDown(.UP) {
-	// 	if character_state.direction != Direction.Up || isTimeToMove {
-	// 		if character_state.direction != Direction.Up do character_state.movement_time_counter = 0.0
-	// 		character_state.direction = Direction.Up
-	// 		character_on_the_move = true
-	// 	}} else if rl.IsKeyDown(.DOWN) {
-	// 	if character_state.direction != Direction.Down || isTimeToMove {
-	// 		if character_state.direction != Direction.Down do character_state.movement_time_counter = 0.0
-	// 		character_state.direction = Direction.Down
-	// 		character_on_the_move = true
-	// 	}} else if rl.IsKeyPressed(.M) do game_state.game_mode = GameMode.TileEditor
-
 	if character_on_the_move do character_state.position = handleCharacterMovement(character_state, game_state)
 
 	// Map scrolling
@@ -272,13 +249,71 @@ handleInput :: proc(
 	}
 }
 
-updateCharacterState :: proc(character_state: ^CharacterState) {
-	character_state.movement_time_counter += rl.GetFrameTime()
-	character_state.pose_time_counter += rl.GetFrameTime()
+updateCharacterAndEnemiesState :: proc(game_state: ^GameState, character_state: ^CharacterState) {
+	delta_time := rl.GetFrameTime()
 
-	if character_state.pose_time_counter > 0.25 {
+	// Update character state
+	character_state.movement_time_counter += delta_time
+	character_state.pose_time_counter += delta_time
+
+	if character_state.pose_time_counter > CHARACTER_POSE_INTERVAL {
 		character_state.pose_time_counter = 0.0
 		character_state.pose += 1
+	}
+
+	// Update enemies state
+	for i in 0 ..< 4 {
+		enemy_state := &game_state.enemies[i]
+		enemy_state.movement_time_counter += delta_time
+		enemy_state.pose_time_counter += delta_time
+
+		if enemy_state.pose_time_counter > ENEMY_POSE_INTERVAL {
+			enemy_state.pose_time_counter = 0.0
+			enemy_state.pose += 1
+		}
+
+		handleEnemyMovement(game_state, enemy_state)
+	}
+}
+
+handleEnemyMovement :: proc(game_state: ^GameState, enemy_state: ^CharacterState) {
+	isTimeToMove := enemy_state.movement_time_counter > ENEMY_MOVEMENT_INTERVAL
+	if !isTimeToMove do return
+
+	enemy_state.movement_time_counter = 0
+	possibleDirections: [dynamic]Direction
+	defer delete(possibleDirections)
+
+	col, row := enemy_state.position.x, enemy_state.position.y
+	// Top
+	if row > 0 && game_state.game_map_boolean[row - 1][col] {
+		append(&possibleDirections, Direction.Up)
+	}
+	// Right
+	if row < GRID_WIDTH - 1 && game_state.game_map_boolean[row][col + 1] {
+		append(&possibleDirections, Direction.Right)
+	}
+	// Down
+	if row < GRID_HEIGHT - 1 && game_state.game_map_boolean[row + 1][col] {
+		append(&possibleDirections, Direction.Down)
+	}
+	// Left
+	if row > 0 && game_state.game_map_boolean[row][col - 1] {
+		append(&possibleDirections, Direction.Left)
+	}
+
+	direction := rand.choice(possibleDirections[:])
+	enemy_state.direction = direction
+
+	#partial switch direction {
+	case Direction.Up:
+		enemy_state.position.y -= 1
+	case Direction.Down:
+		enemy_state.position.y += 1
+	case Direction.Left:
+		enemy_state.position.x -= 1
+	case Direction.Right:
+		enemy_state.position.x += 1
 	}
 }
 
@@ -390,6 +425,26 @@ characterTextureSourceRect :: proc(character_state: ^CharacterState) -> rl.Recta
 	}
 }
 
+enemyDirectionToTextureName: map[Direction]string = {
+	Direction.Up    = "enemy_up",
+	Direction.Down  = "enemy_down",
+	Direction.Left  = "enemy_left",
+	Direction.Right = "enemy_right",
+}
+
+characterDirectionToTextureName: map[Direction]string = {
+	Direction.Up    = "character_back",
+	Direction.Down  = "character_front",
+	Direction.Left  = "character_back",
+	Direction.Right = "character_front",
+}
+
+enemyTextureSourceRect :: proc(character_state: ^CharacterState) -> rl.Rectangle {
+	xPos := f32(character_state.pose % 6) * ENEMY_TEXTURE_SIZE
+	yPos := f32(character_state.pose / 6) * ENEMY_TEXTURE_SIZE
+	return rl.Rectangle{xPos, yPos, ENEMY_TEXTURE_SIZE, ENEMY_TEXTURE_SIZE}
+}
+
 textureSourceRect :: proc {
 	floorTextureSourceRect,
 	characterTextureSourceRect,
@@ -434,11 +489,9 @@ drawNormalMode :: proc(
 		f32(TEXTURE_HEIGHT),
 	}
 
-	characterTexture :=
-		character_state.direction == Direction.Down ||
-		character_state.direction == Direction.Right \
-		? textureMap["character_front"] \
-		: textureMap["character_back"]
+	characterTextureName := characterDirectionToTextureName[character_state.direction]
+
+	characterTexture := textureMap[characterTextureName]
 
 	rl.DrawTexturePro(
 		characterTexture,
@@ -448,6 +501,34 @@ drawNormalMode :: proc(
 		0.0,
 		rl.WHITE,
 	)
+
+	// Render enemies
+	for i in 0 ..< 4 {
+		enemy_state := game_state.enemies[i]
+		x, y := enemyTilePositionToScreenPosition(enemy_state.position)
+
+		sourceRect: rl.Rectangle = enemyTextureSourceRect(&enemy_state)
+
+		destinationRect: rl.Rectangle = rl.Rectangle {
+			f32(x),
+			f32(y),
+			f32(TEXTURE_WIDTH),
+			f32(TEXTURE_HEIGHT),
+		}
+
+		enemyTextureName := enemyDirectionToTextureName[enemy_state.direction]
+
+		enemyTexture := textureMap[enemyTextureName]
+
+		rl.DrawTexturePro(
+			enemyTexture,
+			sourceRect,
+			destinationRect,
+			rl.Vector2{0.0, 0.0},
+			0.0,
+			rl.WHITE,
+		)
+	}
 }
 
 f32_to_cstring :: proc(f: f32) -> cstring {
@@ -477,32 +558,32 @@ handleInputForTileEditor :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
 	else if rl.IsKeyDown(.E) do camera.zoom -= 0.02
 
 	// Change tile edit position
-	xPos, yPos := game_state.tile_edit_position[0], game_state.tile_edit_position[1]
-	if rl.IsKeyPressed(.UP) && xPos > 0 do game_state.tile_edit_position[0] -= 1
-	else if rl.IsKeyPressed(.DOWN) && xPos < GRID_HEIGHT - 1 do game_state.tile_edit_position[0] += 1
-	else if rl.IsKeyPressed(.LEFT) && yPos > 0 do game_state.tile_edit_position[1] -= 1
-	else if rl.IsKeyPressed(.RIGHT) && yPos < GRID_WIDTH - 1 do game_state.tile_edit_position[1] += 1
+	xPos, yPos := game_state.tile_edit_position.x, game_state.tile_edit_position.y
+	if rl.IsKeyPressed(.UP) && yPos > 0 do game_state.tile_edit_position.y -= 1
+	else if rl.IsKeyPressed(.DOWN) && yPos < GRID_HEIGHT - 1 do game_state.tile_edit_position.y += 1
+	else if rl.IsKeyPressed(.LEFT) && xPos > 0 do game_state.tile_edit_position.x -= 1
+	else if rl.IsKeyPressed(.RIGHT) && xPos < GRID_WIDTH - 1 do game_state.tile_edit_position.x += 1
 
 	// Change tile
 	if rl.IsKeyPressed(.SPACE) do updateTileAndNeighbors(game_state, game_state.tile_edit_position)
 }
 
-updateTileAndNeighbors :: proc(game_state: ^GameState, position: [2]int) {
+updateTileAndNeighbors :: proc(game_state: ^GameState, position: Position) {
 	x, y := position.x, position.y
-	if game_state.game_map_boolean[x][y] {
-		game_state.game_map[x][y] = 'O'
-		game_state.game_map_boolean[x][y] = false
+	if game_state.game_map_boolean[y][x] {
+		game_state.game_map[y][x] = 'O'
+		game_state.game_map_boolean[y][x] = false
 		return
 	}
 
 	// Call updateTile for self
-	updateTile(game_state, position)
+	updateTile(game_state, {x, y})
 
 	// Call updateTile for all neighbors
-	if y > 0 && game_state.game_map_boolean[x][y - 1] do updateTile(game_state, {x, y - 1})
-	if x > 0 && game_state.game_map_boolean[x - 1][y] do updateTile(game_state, {x - 1, y})
-	if y < GRID_WIDTH - 1 && game_state.game_map_boolean[x][y + 1] do updateTile(game_state, {x, y + 1})
-	if x < GRID_HEIGHT - 1 && game_state.game_map_boolean[x + 1][y] do updateTile(game_state, {x + 1, y})
+	if x > 0 && game_state.game_map_boolean[y][x - 1] do updateTile(game_state, {position.x - 1, position.y}) // Left
+	if y > 0 && game_state.game_map_boolean[y - 1][x] do updateTile(game_state, {position.x, position.y - 1}) // Top
+	if x < GRID_WIDTH - 1 && game_state.game_map_boolean[y][x + 1] do updateTile(game_state, {position.x + 1, position.y}) // Right
+	if y < GRID_HEIGHT - 1 && game_state.game_map_boolean[y + 1][x] do updateTile(game_state, {position.x, position.y + 1}) // Down
 }
 
 updateTile :: proc(game_state: ^GameState, position: Position) {
@@ -511,50 +592,50 @@ updateTile :: proc(game_state: ^GameState, position: Position) {
 	isNeighborOccupied: [4]bool
 
 	// Left
-	if y > 0 && game_state.game_map_boolean[x][y - 1] do isNeighborOccupied[0] = true
+	if x > 0 && game_state.game_map_boolean[y][x - 1] do isNeighborOccupied[0] = true
 	// Top
-	if x > 0 && game_state.game_map_boolean[x - 1][y] do isNeighborOccupied[1] = true
+	if y > 0 && game_state.game_map_boolean[y - 1][x] do isNeighborOccupied[1] = true
 	// Right
-	if y < GRID_WIDTH - 1 && game_state.game_map_boolean[x][y + 1] do isNeighborOccupied[2] = true
+	if x < GRID_WIDTH - 1 && game_state.game_map_boolean[y][x + 1] do isNeighborOccupied[2] = true
 	// Down
-	if x < GRID_HEIGHT - 1 && game_state.game_map_boolean[x + 1][y] do isNeighborOccupied[3] = true
+	if y < GRID_HEIGHT - 1 && game_state.game_map_boolean[y + 1][x] do isNeighborOccupied[3] = true
 
 	switch isNeighborOccupied {
 	case {false, false, false, false}:
-		game_state.game_map[x][y] = 'X'
+		game_state.game_map[y][x] = 'X'
 	case {true, false, false, false}:
-		game_state.game_map[x][y] = '-'
+		game_state.game_map[y][x] = '-'
 	case {false, true, false, false}:
-		game_state.game_map[x][y] = '|'
+		game_state.game_map[y][x] = '|'
 	case {false, false, true, false}:
-		game_state.game_map[x][y] = '-'
+		game_state.game_map[y][x] = '-'
 	case {false, false, false, true}:
-		game_state.game_map[x][y] = '|'
+		game_state.game_map[y][x] = '|'
 	case {true, true, false, false}:
-		game_state.game_map[x][y] = ']'
+		game_state.game_map[y][x] = ']'
 	case {true, false, true, false}:
-		game_state.game_map[x][y] = '-'
+		game_state.game_map[y][x] = '-'
 	case {true, false, false, true}:
-		game_state.game_map[x][y] = '}'
+		game_state.game_map[y][x] = '}'
 	case {false, true, true, false}:
-		game_state.game_map[x][y] = '['
+		game_state.game_map[y][x] = '['
 	case {false, true, false, true}:
-		game_state.game_map[x][y] = '|'
+		game_state.game_map[y][x] = '|'
 	case {false, false, true, true}:
-		game_state.game_map[x][y] = '{'
+		game_state.game_map[y][x] = '{'
 	case {true, true, true, false}:
-		game_state.game_map[x][y] = 'Z'
+		game_state.game_map[y][x] = 'Z'
 	case {true, true, false, true}:
-		game_state.game_map[x][y] = 'J'
+		game_state.game_map[y][x] = 'J'
 	case {true, false, true, true}:
-		game_state.game_map[x][y] = 'T'
+		game_state.game_map[y][x] = 'T'
 	case {false, true, true, true}:
-		game_state.game_map[x][y] = 'L'
+		game_state.game_map[y][x] = 'L'
 	case {true, true, true, true}:
-		game_state.game_map[x][y] = 'X'
+		game_state.game_map[y][x] = 'X'
 	}
 
-	game_state.game_map_boolean[x][y] = true
+	game_state.game_map_boolean[y][x] = true
 }
 
 drawTileEditorMode :: proc(
@@ -606,4 +687,45 @@ drawTileEditorMode :: proc(
 updateCamera :: proc(character_state: ^CharacterState, camera: ^rl.Camera2D) {
 	xPos, yPos := characterTilePositionToScreenPosition(character_state.position)
 	camera.target = rl.Vector2{f32(xPos), f32(yPos)}
+}
+
+initializeEnemies :: proc() -> [4]CharacterState {
+	enemies: [4]CharacterState
+	for i in 0 ..< 4 {
+		enemies[i] = {
+			pose                  = 0,
+			pose_time_counter     = 0.0,
+			movement_time_counter = 0.0,
+			action                = CharacterAction.Standing,
+			position              = {i + 1, i + 1},
+			direction             = Direction.Down,
+		}
+	}
+
+	return enemies
+}
+
+placeCharacters :: proc(game_state: ^GameState, character_state: ^CharacterState) {
+	available_positions: [dynamic]Position
+	defer delete(available_positions)
+
+	for row in 0 ..< GRID_HEIGHT {
+		for col in 0 ..< GRID_WIDTH {
+			if game_state.game_map_boolean[row][col] {
+				append(&available_positions, Position{col, row})
+			}
+		}
+	}
+
+	// Place character
+	idx := rand.int31() % i32(len(available_positions))
+	character_state.position = available_positions[idx]
+	unordered_remove(&available_positions, int(idx))
+
+	// Place enemies
+	for i in 0 ..< 4 {
+		idx := rand.int31() % i32(len(available_positions))
+		game_state.enemies[i].position = available_positions[idx]
+		unordered_remove(&available_positions, int(idx))
+	}
 }
