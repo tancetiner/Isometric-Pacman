@@ -1,0 +1,16 @@
+O => Empty grass field
+| => Vertical path
+- => Horizontal path
+{ => Top-left intersection
+} => Top-right intersection
+[ => Bottom-left intersection
+] => Bottom-right intersection
+J => Horizontal left to both vertical intersection
+Z => Vertical top to both horizontal intersection
+L => Horizontal right to both vertical intersection
+T => Vertical bottom to both horizontal intersection
+X => All intersection
+E => Horizontal left end
+U => Vertical bottom end
+D => Horizontal right end
+A => Vertical top end
