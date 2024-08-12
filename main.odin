@@ -55,7 +55,7 @@ main :: proc() {
 	}
 
 	// Main game loop
-	for !rl.WindowShouldClose() {
+	gameloop: for !rl.WindowShouldClose() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.RAYWHITE)
 		rl.BeginMode2D(camera)
@@ -67,6 +67,9 @@ main :: proc() {
 
 			// Handling Input
 			handle_input(&game_state, &character_state, &camera)
+
+			// Check collisions
+			if check_collision(&game_state, &character_state) do break gameloop
 
 			// Update Camera
 			// update_camera(&character_state, &camera)

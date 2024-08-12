@@ -222,6 +222,35 @@ update_character_state :: proc(game_state: ^GameState, character_state: ^Charact
 	}
 }
 
+is_possible_to_go_direction :: proc(
+	game_state: ^GameState,
+	position: TilePosition,
+	direction: Direction,
+) -> bool {
+	x, y := position.x, position.y
+
+	#partial switch direction {
+	case Direction.Up:
+		{
+			if y > 0 && game_state.game_map_boolean[y - 1][x] do return true
+		}
+	case Direction.Down:
+		{
+			if y < GRID_HEIGHT - 1 && game_state.game_map_boolean[y + 1][x] do return true
+		}
+	case Direction.Left:
+		{
+			if x > 0 && game_state.game_map_boolean[y][x - 1] do return true
+		}
+	case Direction.Right:
+		{
+			if x < GRID_WIDTH - 1 && game_state.game_map_boolean[y][x + 1] do return true
+		}
+	}
+
+	return false
+}
+
 handle_enemy_movement :: proc(game_state: ^GameState, enemy_state: ^CharacterState) {
 	isTimeToMove := enemy_state.movement_time_counter > ENEMY_MOVEMENT_INTERVAL
 	if !isTimeToMove do return
@@ -230,32 +259,69 @@ handle_enemy_movement :: proc(game_state: ^GameState, enemy_state: ^CharacterSta
 	possibleDirections: [dynamic]Direction
 	defer delete(possibleDirections)
 
-	col, row := enemy_state.position.x, enemy_state.position.y
-	current_direction := enemy_state.direction
-	// Top
-	if row > 0 &&
-	   current_direction != Direction.Down &&
-	   game_state.game_map_boolean[row - 1][col] {
-		append(&possibleDirections, Direction.Up)
-	}
-	// Right
-	if row < GRID_WIDTH - 1 &&
-	   current_direction != Direction.Left &&
-	   game_state.game_map_boolean[row][col + 1] {
-		append(&possibleDirections, Direction.Right)
-	}
-	// Down
-	if row < GRID_HEIGHT - 1 &&
-	   current_direction != Direction.Up &&
-	   game_state.game_map_boolean[row + 1][col] {
-		append(&possibleDirections, Direction.Down)
-	}
-	// Left
-	if row > 0 &&
-	   current_direction != Direction.Right &&
-	   game_state.game_map_boolean[row][col - 1] {
+	currentPosition: TilePosition = {enemy_state.position.x, enemy_state.position.y}
+	currentDirection := enemy_state.direction
+
+	// Left	
+	if is_possible_to_go_direction(game_state, currentPosition, Direction.Left) &&
+	   currentDirection != Direction.Right {
 		append(&possibleDirections, Direction.Left)
+		if currentDirection == Direction.Left {
+			append(&possibleDirections, Direction.Left)
+		} // Add current direction to the list of possible directions for more chances to keep going straight
 	}
+
+	// Up
+	if is_possible_to_go_direction(game_state, currentPosition, Direction.Up) &&
+	   currentDirection != Direction.Down {
+		append(&possibleDirections, Direction.Up)
+		if currentDirection == Direction.Up {
+			append(&possibleDirections, Direction.Up)
+		} // Add current direction to the list of possible directions for more chances to keep going straight
+	}
+
+	// Right
+	if is_possible_to_go_direction(game_state, currentPosition, Direction.Right) &&
+	   currentDirection != Direction.Left {
+		append(&possibleDirections, Direction.Right)
+		if currentDirection == Direction.Right {
+			append(&possibleDirections, Direction.Right)
+		} // Add current direction to the list of possible directions for more chances to keep going straight
+	}
+
+	// Down
+	if is_possible_to_go_direction(game_state, currentPosition, Direction.Down) &&
+	   currentDirection != Direction.Up {
+		append(&possibleDirections, Direction.Down)
+		if currentDirection == Direction.Down {
+			append(&possibleDirections, Direction.Down)
+		} // Add current direction to the list of possible directions for more chances to keep going straight
+	}
+
+
+	// If there are no possible directions, go back
+	if len(possibleDirections) == 0 {
+		#partial switch currentDirection {
+		case Direction.Up:
+			{
+				append(&possibleDirections, Direction.Down)
+			}
+		case Direction.Down:
+			{
+				append(&possibleDirections, Direction.Up)
+			}
+		case Direction.Left:
+			{
+				append(&possibleDirections, Direction.Right)
+			}
+		case Direction.Right:
+			{
+				append(&possibleDirections, Direction.Left)
+			}
+		}
+	}
+
+	fmt.println("Possible directions: ", possibleDirections)
 
 	direction := rand.choice(possibleDirections[:])
 	enemy_state.direction = direction
@@ -665,4 +731,15 @@ place_characters :: proc(game_state: ^GameState, character_state: ^CharacterStat
 		game_state.enemies[i].position = available_positions[idx]
 		unordered_remove(&available_positions, int(idx))
 	}
+}
+
+check_collision :: proc(game_state: ^GameState, character_state: ^CharacterState) -> bool {
+	x, y := character_state.position.x, character_state.position.y
+
+	for i in 0 ..< 4 {
+		enemy_state := game_state.enemies[i]
+		if enemy_state.position.x == x && enemy_state.position.y == y do return true
+	}
+
+	return false
 }
