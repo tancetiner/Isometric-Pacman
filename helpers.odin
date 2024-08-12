@@ -47,13 +47,13 @@ read_map :: proc(
 write_map :: proc(game_state: ^GameState, filepath: string) {
 	game_map_string: string
 	for row in 0 ..< GRID_HEIGHT {
+		rune_array: [dynamic]rune
 		for col in 0 ..< GRID_WIDTH {
-			rune_array: []rune = {game_state.game_map[row][col]}
-			game_map_string = strings.concatenate(
-				{game_map_string, utf8.runes_to_string(rune_array)},
-			)
+			append(&rune_array, game_state.game_map[row][col])
 		}
-		game_map_string = strings.concatenate({game_map_string, "\n"})
+		game_map_string = strings.concatenate(
+			{game_map_string, utf8.runes_to_string(rune_array[:]), "\n"},
+		)
 	}
 	data: []u8 = transmute([]u8)game_map_string
 
@@ -125,15 +125,17 @@ move_character :: proc(character_state: ^CharacterState, game_state: ^GameState)
 }
 
 load_textures :: proc() -> map[string]rl.Texture2D {
-	return (map[string]rl.Texture2D) {
-		"floor" = rl.LoadTexture("assets/floor.png"),
-		"character_front" = rl.LoadTexture("assets/character_front.png"),
-		"character_back" = rl.LoadTexture("assets/character_back.png"),
-		"enemy_up" = rl.LoadTexture("assets/enemy_up.png"),
-		"enemy_down" = rl.LoadTexture("assets/enemy_down.png"),
-		"enemy_left" = rl.LoadTexture("assets/enemy_left.png"),
-		"enemy_right" = rl.LoadTexture("assets/enemy_right.png"),
-	}
+	return(
+		(map[string]rl.Texture2D) {
+			"floor" = rl.LoadTexture("assets/floor.png"),
+			"character_front" = rl.LoadTexture("assets/character_front.png"),
+			"character_back" = rl.LoadTexture("assets/character_back.png"),
+			"enemy_up" = rl.LoadTexture("assets/enemy_up.png"),
+			"enemy_down" = rl.LoadTexture("assets/enemy_down.png"),
+			"enemy_left" = rl.LoadTexture("assets/enemy_left.png"),
+			"enemy_right" = rl.LoadTexture("assets/enemy_right.png"),
+		} \
+	)
 }
 
 handle_input :: proc(
@@ -171,7 +173,7 @@ handle_input :: proc(
 			character_on_the_move = true
 		}
 	} else if rl.IsKeyPressed(.M) {
-		game_state.game_mode = GameMode.TileEditor
+		game_state.mode = GameMode.TileEditor
 	}
 
 	if character_on_the_move do move_character(character_state, game_state)
@@ -196,7 +198,7 @@ handle_input :: proc(
 
 	// Go back to main menu
 	if rl.IsKeyPressed(.ESCAPE) {
-		game_state.game_mode = GameMode.MainMenu
+		game_state.mode = GameMode.MainMenu
 	}
 }
 
@@ -257,7 +259,24 @@ is_possible_to_go_direction :: proc(
 }
 
 handle_enemy_movement :: proc(game_state: ^GameState, enemy_state: ^CharacterState) {
-	isTimeToMove := enemy_state.movement_time_counter > ENEMY_MOVEMENT_INTERVAL
+	speedCoefficient: f32
+	switch game_state.difficulty {
+	case GameDifficulty.Easy:
+		{
+			speedCoefficient = 1.0
+		}
+	case GameDifficulty.Medium:
+		{
+			speedCoefficient = 0.75
+		}
+	case GameDifficulty.Hard:
+		{
+			speedCoefficient = 0.5
+		}
+	}
+
+	isTimeToMove :=
+		enemy_state.movement_time_counter > (ENEMY_MOVEMENT_INTERVAL * speedCoefficient)
 	if !isTimeToMove do return
 
 	enemy_state.movement_time_counter = 0
@@ -267,7 +286,7 @@ handle_enemy_movement :: proc(game_state: ^GameState, enemy_state: ^CharacterSta
 	currentPosition: TilePosition = {enemy_state.position.x, enemy_state.position.y}
 	currentDirection := enemy_state.direction
 
-	// Left	
+	// Left
 	if is_possible_to_go_direction(game_state, currentPosition, Direction.Left) &&
 	   currentDirection != Direction.Right {
 		append(&possibleDirections, Direction.Left)
@@ -441,12 +460,14 @@ character_texture_source_rect :: proc(character_state: ^CharacterState) -> rl.Re
 		}
 	}
 
-	return rl.Rectangle {
-		xPos,
-		yPos,
-		f32(flipConstant) * CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE,
-	}
+	return(
+		rl.Rectangle {
+			xPos,
+			yPos,
+			f32(flipConstant) * CHARACTER_TEXTURE_SIZE,
+			CHARACTER_TEXTURE_SIZE,
+		} \
+	)
 }
 
 enemy_texture_source_rect :: proc(character_state: ^CharacterState) -> rl.Rectangle {
@@ -550,7 +571,7 @@ handle_input_tile_editor :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
 	// Go back to main menu
 	if rl.IsKeyPressed(.ESCAPE) {
 		write_map(game_state, "assets/map.txt")
-		game_state.game_mode = GameMode.MainMenu
+		game_state.mode = GameMode.MainMenu
 	}
 
 	// Map scrolling
@@ -740,6 +761,8 @@ check_collision :: proc(game_state: ^GameState, character_state: ^CharacterState
 		if enemy_state.position.x == x && enemy_state.position.y == y do return true
 	}
 
+	game_state.counter = 0.0
+
 	return false
 }
 
@@ -752,9 +775,9 @@ handle_input_main_menu :: proc(game_state: ^GameState) {
 	if rl.IsKeyPressed(.KP_ENTER) || rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.SPACE) {
 		switch idx {
 		case 0:
-			game_state.game_mode = GameMode.PlayGame
+			game_state.mode = GameMode.PlayGame
 		case 1:
-			game_state.game_mode = GameMode.TileEditor
+			game_state.mode = GameMode.TileEditor
 		case 2:
 			change_difficulty(game_state)
 		case 3:
@@ -836,4 +859,17 @@ draw_main_menu :: proc(game_state: ^GameState) {
 			rl.RAYWHITE,
 		)
 	}
+}
+
+// Draw Game Over
+draw_game_over :: proc(game_state: ^GameState) {
+	textWidth := rl.MeasureText("GAME OVER", 40)
+	rl.DrawText("GAME OVER", (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 2 - 20, 40, rl.RED)
+}
+
+reset_game :: proc(game_state: ^GameState, character_state: ^CharacterState) {
+	game_state.mode = GameMode.MainMenu
+	game_state.main_menu_index = 0
+	game_state.counter = 0.0
+	place_characters(game_state, character_state)
 }

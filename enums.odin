@@ -18,6 +18,7 @@ GameMode :: enum {
 	MainMenu,
 	PlayGame,
 	TileEditor,
+	GameOver,
 }
 
 TextureType :: enum {

@@ -23,12 +23,14 @@ main :: proc() {
 	enemies: [4]CharacterState = initialize_enemies()
 
 	game_state: GameState = GameState {
-		game_mode          = GameMode.MainMenu,
+		mode               = GameMode.MainMenu,
 		game_map           = gameMap,
 		game_map_boolean   = gameMapBoolean,
 		tile_edit_position = {0, 0},
 		enemies            = enemies,
 		main_menu_index    = 0,
+		counter            = 0.0,
+		difficulty         = GameDifficulty.Easy,
 	}
 
 	// Initialize Character State
@@ -60,7 +62,7 @@ main :: proc() {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.RAYWHITE)
 
-		switch game_state.game_mode {
+		switch game_state.mode {
 		case GameMode.MainMenu:
 			// Handling Input
 			handle_input_main_menu(&game_state)
@@ -78,7 +80,7 @@ main :: proc() {
 			handle_input(&game_state, &character_state, &camera)
 
 			// Check collisions
-			if check_collision(&game_state, &character_state) do break gameloop
+			if check_collision(&game_state, &character_state) do game_state.mode = GameMode.GameOver
 
 			// Update Camera
 			// update_camera(&character_state, &camera)
@@ -98,6 +100,16 @@ main :: proc() {
 			draw_tile_editor_mode(&game_state, &textureMap)
 
 			rl.EndMode2D()
+
+		case GameMode.GameOver:
+			// Update counter
+			game_state.counter += rl.GetFrameTime()
+
+			// Check if counter is greater than 3 seconds
+			if game_state.counter > 3.0 do reset_game(&game_state, &character_state)
+
+			// Draw Game Over
+			draw_game_over(&game_state)
 		}
 
 		// End Drawing
