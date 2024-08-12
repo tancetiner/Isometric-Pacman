@@ -23,11 +23,12 @@ main :: proc() {
 	enemies: [4]CharacterState = initialize_enemies()
 
 	game_state: GameState = GameState {
-		game_mode          = GameMode.Normal,
+		game_mode          = GameMode.MainMenu,
 		game_map           = gameMap,
 		game_map_boolean   = gameMapBoolean,
 		tile_edit_position = {0, 0},
 		enemies            = enemies,
+		main_menu_index    = 0,
 	}
 
 	// Initialize Character State
@@ -55,13 +56,21 @@ main :: proc() {
 	}
 
 	// Main game loop
-	gameloop: for !rl.WindowShouldClose() {
+	gameloop: for true {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.RAYWHITE)
-		rl.BeginMode2D(camera)
 
 		switch game_state.game_mode {
-		case GameMode.Normal:
+		case GameMode.MainMenu:
+			// Handling Input
+			handle_input_main_menu(&game_state)
+
+			// Draw Main Menu
+			draw_main_menu(&game_state)
+
+		case GameMode.PlayGame:
+			rl.BeginMode2D(camera)
+
 			// Update character state
 			update_character_state(&game_state, &character_state)
 
@@ -77,16 +86,21 @@ main :: proc() {
 			// Draw Game
 			draw_normal_mode(&game_state, &character_state, &textureMap)
 
+			rl.EndMode2D()
+
 		case GameMode.TileEditor:
+			rl.BeginMode2D(camera)
+
 			// Handling Input
 			handle_input_tile_editor(&game_state, &camera)
 
 			// Draw Tile Editor
-			draw_tile_editor_mode(&game_state, &character_state, &textureMap)
+			draw_tile_editor_mode(&game_state, &textureMap)
+
+			rl.EndMode2D()
 		}
 
 		// End Drawing
-		rl.EndMode2D()
 		rl.EndDrawing()
 	}
 }

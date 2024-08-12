@@ -10,6 +10,8 @@ GameState :: struct {
 	game_map_boolean:   [GRID_HEIGHT][GRID_WIDTH]bool,
 	tile_edit_position: TilePosition,
 	enemies:            [4]CharacterState,
+	main_menu_index:    int,
+	difficulty:         GameDifficulty,
 }
 
 CharacterState :: struct {

@@ -15,7 +15,8 @@ CharacterAction :: enum {
 }
 
 GameMode :: enum {
-	Normal,
+	MainMenu,
+	PlayGame,
 	TileEditor,
 }
 
@@ -23,4 +24,10 @@ TextureType :: enum {
 	Character,
 	Enemy,
 	Tile,
+}
+
+GameDifficulty :: enum {
+	Easy,
+	Medium,
+	Hard,
 }

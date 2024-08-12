@@ -193,6 +193,11 @@ handle_input :: proc(
 	} else if rl.IsKeyDown(.E) {
 		camera.zoom -= 0.02
 	}
+
+	// Go back to main menu
+	if rl.IsKeyPressed(.ESCAPE) {
+		game_state.game_mode = GameMode.MainMenu
+	}
 }
 
 update_character_state :: proc(game_state: ^GameState, character_state: ^CharacterState) {
@@ -320,8 +325,6 @@ handle_enemy_movement :: proc(game_state: ^GameState, enemy_state: ^CharacterSta
 			}
 		}
 	}
-
-	fmt.println("Possible directions: ", possibleDirections)
 
 	direction := rand.choice(possibleDirections[:])
 	enemy_state.direction = direction
@@ -544,10 +547,10 @@ f32_to_cstring :: proc(f: f32) -> cstring {
 handle_input_tile_editor :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
 	using rl.KeyboardKey
 
-	// Change game mode
-	if rl.IsKeyPressed(.M) {
+	// Go back to main menu
+	if rl.IsKeyPressed(.ESCAPE) {
 		write_map(game_state, "assets/map.txt")
-		game_state.game_mode = GameMode.Normal
+		game_state.game_mode = GameMode.MainMenu
 	}
 
 	// Map scrolling
@@ -641,11 +644,7 @@ update_tile :: proc(game_state: ^GameState, position: TilePosition) {
 	game_state.game_map_boolean[y][x] = true
 }
 
-draw_tile_editor_mode :: proc(
-	game_state: ^GameState,
-	character_state: ^CharacterState,
-	texture_map: ^map[string]rl.Texture2D,
-) {
+draw_tile_editor_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.Texture2D) {
 	for col in 0 ..< GRID_WIDTH {
 		for row in 0 ..< GRID_HEIGHT {
 			position := tile_position_to_screen_position({col, row})
@@ -742,4 +741,99 @@ check_collision :: proc(game_state: ^GameState, character_state: ^CharacterState
 	}
 
 	return false
+}
+
+handle_input_main_menu :: proc(game_state: ^GameState) {
+	using rl.KeyboardKey
+	idx := game_state.main_menu_index
+
+	if rl.IsKeyPressed(.DOWN) || rl.IsKeyPressed(.S) do if idx < 3 do idx += 1
+	if rl.IsKeyPressed(.UP) || rl.IsKeyPressed(.W) do if idx > 0 do idx -= 1
+	if rl.IsKeyPressed(.KP_ENTER) || rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.SPACE) {
+		switch idx {
+		case 0:
+			game_state.game_mode = GameMode.PlayGame
+		case 1:
+			game_state.game_mode = GameMode.TileEditor
+		case 2:
+			change_difficulty(game_state)
+		case 3:
+			os.exit(0)
+		}
+	}
+
+	game_state.main_menu_index = idx
+}
+
+change_difficulty :: proc(game_state: ^GameState) {
+	using GameDifficulty
+
+	switch game_state.difficulty {
+	case GameDifficulty.Easy:
+		game_state.difficulty = GameDifficulty.Medium
+	case GameDifficulty.Medium:
+		game_state.difficulty = GameDifficulty.Hard
+	case GameDifficulty.Hard:
+		game_state.difficulty = GameDifficulty.Easy
+	}
+}
+
+gameDifficultyToString := map[GameDifficulty]string {
+	GameDifficulty.Easy   = "Easy",
+	GameDifficulty.Medium = "Medium",
+	GameDifficulty.Hard   = "Hard",
+}
+
+// Draw Main Menu
+draw_main_menu :: proc(game_state: ^GameState) {
+	textWidth := rl.MeasureText("ISOMETRIC PACMAN", 40)
+	rl.DrawText(
+		"ISOMETRIC PACMAN",
+		(WINDOW_WIDTH - textWidth) / 2,
+		WINDOW_HEIGHT * 2 / 10,
+		40,
+		rl.RED,
+	)
+
+	rectangleColors := [4]rl.Color{rl.BLACK, rl.BLACK, rl.BLACK, rl.BLACK}
+	rectangleColors[game_state.main_menu_index] = rl.RED
+
+	rectangleWidth: i32 = WINDOW_WIDTH / 4
+	rectangleHeight: i32 = WINDOW_HEIGHT / 12
+
+	rectanglePositionX: i32 = i32(WINDOW_WIDTH / 2)
+	rectanglePositionY: i32 = i32(WINDOW_HEIGHT * 3 / 10)
+
+	options := [4]string{"Play Game", "Tile Editor", "Change Difficulty", "Exit"}
+
+	for i in 0 ..< 4 {
+		rectanglePositionY += rectangleHeight * 3 / 2
+
+		rl.DrawRectangle(
+			rectanglePositionX - rectangleWidth / 2,
+			rectanglePositionY,
+			rectangleWidth,
+			rectangleHeight,
+			rectangleColors[i],
+		)
+
+		text := options[i]
+
+		if i == 2 {
+			text = strings.concatenate(
+				{"Change Difficulty: ", gameDifficultyToString[game_state.difficulty]},
+			)
+		}
+
+		textC: cstring = strings.unsafe_string_to_cstring(text)
+		textWidth := rl.MeasureText(textC, 20)
+
+		rl.DrawText(
+			textC,
+			WINDOW_WIDTH / 2 - textWidth / 2,
+			rectanglePositionY + rectangleHeight / 2 - 10,
+			20,
+			rl.RAYWHITE,
+		)
+	}
 }
