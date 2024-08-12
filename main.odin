@@ -8,7 +8,7 @@ main :: proc() {
 	defer rl.CloseWindow()
 
 	// Initialize Textures
-	textureMap: map[string]rl.Texture2D = loadTextures()
+	textureMap: map[string]rl.Texture2D = load_textures()
 
 	defer {
 		for _, value in textureMap {
@@ -20,7 +20,7 @@ main :: proc() {
 	gameMap, gameMapBoolean := read_map("./assets/map.txt")
 
 	// Initialize Enemies
-	enemies: [4]CharacterState = initializeEnemies()
+	enemies: [4]CharacterState = initialize_enemies()
 
 	game_state: GameState = GameState {
 		game_mode          = GameMode.Normal,
@@ -41,7 +41,7 @@ main :: proc() {
 	}
 
 	// Randomly place character and enemies
-	placeCharacters(&game_state, &character_state)
+	place_characters(&game_state, &character_state)
 
 	// Initialize Camera
 	// xPos, yPos := characterTilePositionToScreenPosition(character_state.position)
@@ -63,23 +63,23 @@ main :: proc() {
 		switch game_state.game_mode {
 		case GameMode.Normal:
 			// Update character state
-			updateCharacterAndEnemiesState(&game_state, &character_state)
+			update_character_state(&game_state, &character_state)
 
 			// Handling Input
-			handleInput(&game_state, &character_state, &camera)
+			handle_input(&game_state, &character_state, &camera)
 
 			// Update Camera
-			// updateCamera(&character_state, &camera)
+			// update_camera(&character_state, &camera)
 
 			// Draw Game
-			drawNormalMode(&game_state, &character_state, &textureMap)
+			draw_normal_mode(&game_state, &character_state, &textureMap)
 
 		case GameMode.TileEditor:
 			// Handling Input
-			handleInputForTileEditor(&game_state, &camera)
+			handle_input_tile_editor(&game_state, &camera)
 
 			// Draw Tile Editor
-			drawTileEditorMode(&game_state, &character_state, &textureMap)
+			draw_tile_editor_mode(&game_state, &character_state, &textureMap)
 		}
 
 		// End Drawing

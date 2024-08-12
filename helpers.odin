@@ -61,79 +61,25 @@ write_map :: proc(game_state: ^GameState, filepath: string) {
 	else do fmt.println("Could not write file")
 }
 
-// A hash-map of rune to Rectangle
-sourceRectMap := map[rune]rl.Rectangle {
-	'O' = rl.Rectangle{0.0, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'|' = rl.Rectangle{MAP_TEXTURE_SIZE, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'-' = rl.Rectangle{MAP_TEXTURE_SIZE * 2, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'{' = rl.Rectangle{MAP_TEXTURE_SIZE * 3, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	']' = rl.Rectangle{MAP_TEXTURE_SIZE * 4, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'}' = rl.Rectangle{MAP_TEXTURE_SIZE * 5, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'[' = rl.Rectangle{MAP_TEXTURE_SIZE * 6, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'J' = rl.Rectangle{MAP_TEXTURE_SIZE * 7, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'Z' = rl.Rectangle{MAP_TEXTURE_SIZE * 8, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'L' = rl.Rectangle{MAP_TEXTURE_SIZE * 9, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'T' = rl.Rectangle{0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'X' = rl.Rectangle{MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'E' = rl.Rectangle{MAP_TEXTURE_SIZE * 2, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'U' = rl.Rectangle{MAP_TEXTURE_SIZE * 3, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'D' = rl.Rectangle{MAP_TEXTURE_SIZE * 4, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'A' = rl.Rectangle{MAP_TEXTURE_SIZE * 5, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-}
 
-
-tilePositionToScreenPosition :: proc(position: Position) -> (f32, f32) {
+tile_position_to_screen_position :: proc(
+	position: TilePosition,
+	texture_type := TextureType.Tile,
+) -> ScreenPosition {
 	x := f32(position.x - position.y) * (TEXTURE_WIDTH / 2)
 	y := f32(position.x + position.y) * (TEXTURE_HEIGHT / 4)
-	return x, y
+
+	#partial switch texture_type {
+	case TextureType.Character:
+		y -= TEXTURE_HEIGHT / 2 + TEXTURE_HEIGHT / 8
+	case TextureType.Enemy:
+		y -= TEXTURE_HEIGHT / 4
+	}
+
+	return {x, y}
 }
 
-characterTilePositionToScreenPosition :: proc(position: Position) -> (f32, f32) {
-	x := f32(position.x - position.y) * (TEXTURE_WIDTH / 2)
-	y :=
-		f32(position.x + position.y) * (TEXTURE_HEIGHT / 4) -
-		TEXTURE_HEIGHT / 2 -
-		TEXTURE_HEIGHT / 8
-	return x, y
-}
-
-enemyTilePositionToScreenPosition :: proc(position: Position) -> (f32, f32) {
-	x := f32(position.x - position.y) * (TEXTURE_WIDTH / 2)
-	y := f32(position.x + position.y) * (TEXTURE_HEIGHT / 4) - TEXTURE_HEIGHT / 4
-	return x, y
-}
-
-characterPoseTextureMap := map[int]rl.Rectangle {
-	0 = rl.Rectangle {
-		0.0,
-		CHARACTER_TEXTURE_SIZE * 2,
-		CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE,
-	},
-	1 = rl.Rectangle {
-		CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE * 2,
-		CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE,
-	},
-	2 = rl.Rectangle {
-		CHARACTER_TEXTURE_SIZE * 2,
-		CHARACTER_TEXTURE_SIZE * 2,
-		CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE,
-	},
-	3 = rl.Rectangle {
-		CHARACTER_TEXTURE_SIZE * 3,
-		CHARACTER_TEXTURE_SIZE * 2,
-		CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE,
-	},
-}
-
-handleCharacterMovement :: proc(
-	character_state: ^CharacterState,
-	game_state: ^GameState,
-) -> Position {
+move_character :: proc(character_state: ^CharacterState, game_state: ^GameState) {
 	newCharacterPosition := character_state.position
 
 	#partial switch character_state.direction {
@@ -174,11 +120,11 @@ handleCharacterMovement :: proc(
 		}
 	}
 
-	return newCharacterPosition
+	// Assign new position
+	character_state.position = newCharacterPosition
 }
 
-
-loadTextures :: proc() -> map[string]rl.Texture2D {
+load_textures :: proc() -> map[string]rl.Texture2D {
 	return (map[string]rl.Texture2D) {
 		"floor" = rl.LoadTexture("assets/floor.png"),
 		"character_front" = rl.LoadTexture("assets/character_front.png"),
@@ -190,7 +136,7 @@ loadTextures :: proc() -> map[string]rl.Texture2D {
 	}
 }
 
-handleInput :: proc(
+handle_input :: proc(
 	game_state: ^GameState,
 	character_state: ^CharacterState,
 	camera: ^rl.Camera2D,
@@ -228,7 +174,7 @@ handleInput :: proc(
 		game_state.game_mode = GameMode.TileEditor
 	}
 
-	if character_on_the_move do character_state.position = handleCharacterMovement(character_state, game_state)
+	if character_on_the_move do move_character(character_state, game_state)
 
 	// Map scrolling
 	if rl.IsKeyDown(.W) {
@@ -249,7 +195,7 @@ handleInput :: proc(
 	}
 }
 
-updateCharacterAndEnemiesState :: proc(game_state: ^GameState, character_state: ^CharacterState) {
+update_character_state :: proc(game_state: ^GameState, character_state: ^CharacterState) {
 	delta_time := rl.GetFrameTime()
 
 	// Update character state
@@ -272,11 +218,11 @@ updateCharacterAndEnemiesState :: proc(game_state: ^GameState, character_state: 
 			enemy_state.pose += 1
 		}
 
-		handleEnemyMovement(game_state, enemy_state)
+		handle_enemy_movement(game_state, enemy_state)
 	}
 }
 
-handleEnemyMovement :: proc(game_state: ^GameState, enemy_state: ^CharacterState) {
+handle_enemy_movement :: proc(game_state: ^GameState, enemy_state: ^CharacterState) {
 	isTimeToMove := enemy_state.movement_time_counter > ENEMY_MOVEMENT_INTERVAL
 	if !isTimeToMove do return
 
@@ -285,20 +231,29 @@ handleEnemyMovement :: proc(game_state: ^GameState, enemy_state: ^CharacterState
 	defer delete(possibleDirections)
 
 	col, row := enemy_state.position.x, enemy_state.position.y
+	current_direction := enemy_state.direction
 	// Top
-	if row > 0 && game_state.game_map_boolean[row - 1][col] {
+	if row > 0 &&
+	   current_direction != Direction.Down &&
+	   game_state.game_map_boolean[row - 1][col] {
 		append(&possibleDirections, Direction.Up)
 	}
 	// Right
-	if row < GRID_WIDTH - 1 && game_state.game_map_boolean[row][col + 1] {
+	if row < GRID_WIDTH - 1 &&
+	   current_direction != Direction.Left &&
+	   game_state.game_map_boolean[row][col + 1] {
 		append(&possibleDirections, Direction.Right)
 	}
 	// Down
-	if row < GRID_HEIGHT - 1 && game_state.game_map_boolean[row + 1][col] {
+	if row < GRID_HEIGHT - 1 &&
+	   current_direction != Direction.Up &&
+	   game_state.game_map_boolean[row + 1][col] {
 		append(&possibleDirections, Direction.Down)
 	}
 	// Left
-	if row > 0 && game_state.game_map_boolean[row][col - 1] {
+	if row > 0 &&
+	   current_direction != Direction.Right &&
+	   game_state.game_map_boolean[row][col - 1] {
 		append(&possibleDirections, Direction.Left)
 	}
 
@@ -317,11 +272,11 @@ handleEnemyMovement :: proc(game_state: ^GameState, enemy_state: ^CharacterState
 	}
 }
 
-floorTextureSourceRect :: proc(char: rune) -> rl.Rectangle {
-	return sourceRectMap[char]
+floor_texture_source_rect :: proc(char: rune) -> rl.Rectangle {
+	return floorTextureSourceRectMap[char]
 }
 
-characterTextureSourceRect :: proc(character_state: ^CharacterState) -> rl.Rectangle {
+character_texture_source_rect :: proc(character_state: ^CharacterState) -> rl.Rectangle {
 	using Direction, CharacterAction
 
 	flipConstant: int
@@ -425,50 +380,32 @@ characterTextureSourceRect :: proc(character_state: ^CharacterState) -> rl.Recta
 	}
 }
 
-enemyDirectionToTextureName: map[Direction]string = {
-	Direction.Up    = "enemy_up",
-	Direction.Down  = "enemy_down",
-	Direction.Left  = "enemy_left",
-	Direction.Right = "enemy_right",
-}
-
-characterDirectionToTextureName: map[Direction]string = {
-	Direction.Up    = "character_back",
-	Direction.Down  = "character_front",
-	Direction.Left  = "character_back",
-	Direction.Right = "character_front",
-}
-
-enemyTextureSourceRect :: proc(character_state: ^CharacterState) -> rl.Rectangle {
+enemy_texture_source_rect :: proc(character_state: ^CharacterState) -> rl.Rectangle {
 	xPos := f32(character_state.pose % 6) * ENEMY_TEXTURE_SIZE
 	yPos := f32(character_state.pose / 6) * ENEMY_TEXTURE_SIZE
 	return rl.Rectangle{xPos, yPos, ENEMY_TEXTURE_SIZE, ENEMY_TEXTURE_SIZE}
 }
 
-textureSourceRect :: proc {
-	floorTextureSourceRect,
-	characterTextureSourceRect,
-}
-
-drawNormalMode :: proc(
+draw_normal_mode :: proc(
 	game_state: ^GameState,
 	character_state: ^CharacterState,
 	textureMap: ^map[string]rl.Texture2D,
 ) {
 	for col in 0 ..< GRID_WIDTH {
 		for row in 0 ..< GRID_HEIGHT {
-			x, y := tilePositionToScreenPosition({col, row})
+			position: ScreenPosition
+			position = tile_position_to_screen_position({col, row})
 
 			destRect: rl.Rectangle = rl.Rectangle {
-				f32(x),
-				f32(y),
+				f32(position.x),
+				f32(position.y),
 				f32(TEXTURE_WIDTH),
 				f32(TEXTURE_HEIGHT),
 			}
 
 			rl.DrawTexturePro(
 				textureMap["floor"],
-				textureSourceRect(game_state.game_map[row][col]),
+				floor_texture_source_rect(game_state.game_map[row][col]),
 				destRect,
 				rl.Vector2{0.0, 0.0},
 				0.0,
@@ -478,13 +415,14 @@ drawNormalMode :: proc(
 	}
 
 	// Render character
-	x, y := characterTilePositionToScreenPosition(character_state.position)
 
-	sourceRect: rl.Rectangle = textureSourceRect(character_state)
+	position := tile_position_to_screen_position(character_state.position, TextureType.Character)
+
+	sourceRect: rl.Rectangle = character_texture_source_rect(character_state)
 
 	destinationRect: rl.Rectangle = rl.Rectangle {
-		f32(x),
-		f32(y),
+		f32(position.x),
+		f32(position.y),
 		f32(TEXTURE_WIDTH),
 		f32(TEXTURE_HEIGHT),
 	}
@@ -505,13 +443,13 @@ drawNormalMode :: proc(
 	// Render enemies
 	for i in 0 ..< 4 {
 		enemy_state := game_state.enemies[i]
-		x, y := enemyTilePositionToScreenPosition(enemy_state.position)
+		position := tile_position_to_screen_position(enemy_state.position, TextureType.Enemy)
 
-		sourceRect: rl.Rectangle = enemyTextureSourceRect(&enemy_state)
+		sourceRect: rl.Rectangle = enemy_texture_source_rect(&enemy_state)
 
 		destinationRect: rl.Rectangle = rl.Rectangle {
-			f32(x),
-			f32(y),
+			f32(position.x),
+			f32(position.y),
 			f32(TEXTURE_WIDTH),
 			f32(TEXTURE_HEIGHT),
 		}
@@ -537,8 +475,7 @@ f32_to_cstring :: proc(f: f32) -> cstring {
 	return strings.to_cstring(&builder)
 }
 
-
-handleInputForTileEditor :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
+handle_input_tile_editor :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
 	using rl.KeyboardKey
 
 	// Change game mode
@@ -565,10 +502,10 @@ handleInputForTileEditor :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
 	else if rl.IsKeyPressed(.RIGHT) && xPos < GRID_WIDTH - 1 do game_state.tile_edit_position.x += 1
 
 	// Change tile
-	if rl.IsKeyPressed(.SPACE) do updateTileAndNeighbors(game_state, game_state.tile_edit_position)
+	if rl.IsKeyPressed(.SPACE) do update_tile_and_neighbors(game_state, game_state.tile_edit_position)
 }
 
-updateTileAndNeighbors :: proc(game_state: ^GameState, position: Position) {
+update_tile_and_neighbors :: proc(game_state: ^GameState, position: TilePosition) {
 	x, y := position.x, position.y
 	if game_state.game_map_boolean[y][x] {
 		game_state.game_map[y][x] = 'O'
@@ -576,17 +513,17 @@ updateTileAndNeighbors :: proc(game_state: ^GameState, position: Position) {
 		return
 	}
 
-	// Call updateTile for self
-	updateTile(game_state, {x, y})
+	// Call update_tile for self
+	update_tile(game_state, {x, y})
 
-	// Call updateTile for all neighbors
-	if x > 0 && game_state.game_map_boolean[y][x - 1] do updateTile(game_state, {position.x - 1, position.y}) // Left
-	if y > 0 && game_state.game_map_boolean[y - 1][x] do updateTile(game_state, {position.x, position.y - 1}) // Top
-	if x < GRID_WIDTH - 1 && game_state.game_map_boolean[y][x + 1] do updateTile(game_state, {position.x + 1, position.y}) // Right
-	if y < GRID_HEIGHT - 1 && game_state.game_map_boolean[y + 1][x] do updateTile(game_state, {position.x, position.y + 1}) // Down
+	// Call update_tile for all neighbors
+	if x > 0 && game_state.game_map_boolean[y][x - 1] do update_tile(game_state, {position.x - 1, position.y}) // Left
+	if y > 0 && game_state.game_map_boolean[y - 1][x] do update_tile(game_state, {position.x, position.y - 1}) // Top
+	if x < GRID_WIDTH - 1 && game_state.game_map_boolean[y][x + 1] do update_tile(game_state, {position.x + 1, position.y}) // Right
+	if y < GRID_HEIGHT - 1 && game_state.game_map_boolean[y + 1][x] do update_tile(game_state, {position.x, position.y + 1}) // Down
 }
 
-updateTile :: proc(game_state: ^GameState, position: Position) {
+update_tile :: proc(game_state: ^GameState, position: TilePosition) {
 	x, y := position.x, position.y
 
 	isNeighborOccupied: [4]bool
@@ -638,25 +575,25 @@ updateTile :: proc(game_state: ^GameState, position: Position) {
 	game_state.game_map_boolean[y][x] = true
 }
 
-drawTileEditorMode :: proc(
+draw_tile_editor_mode :: proc(
 	game_state: ^GameState,
 	character_state: ^CharacterState,
 	texture_map: ^map[string]rl.Texture2D,
 ) {
 	for col in 0 ..< GRID_WIDTH {
 		for row in 0 ..< GRID_HEIGHT {
-			x, y := tilePositionToScreenPosition({col, row})
+			position := tile_position_to_screen_position({col, row})
 
 			destRect: rl.Rectangle = rl.Rectangle {
-				f32(x),
-				f32(y),
+				f32(position.x),
+				f32(position.y),
 				f32(TEXTURE_WIDTH),
 				f32(TEXTURE_HEIGHT),
 			}
 
 			rl.DrawTexturePro(
 				texture_map["floor"],
-				textureSourceRect(game_state.game_map[row][col]),
+				floor_texture_source_rect(game_state.game_map[row][col]),
 				destRect,
 				rl.Vector2{0.0, 0.0},
 				0.0,
@@ -666,30 +603,30 @@ drawTileEditorMode :: proc(
 	}
 
 	// Draw colored rectangle on top of the isometric tile
-	x, y := tilePositionToScreenPosition(game_state.tile_edit_position)
+	position := tile_position_to_screen_position(game_state.tile_edit_position)
 
 	destRect: rl.Rectangle = rl.Rectangle {
-		f32(x + TEXTURE_WIDTH / 2),
-		f32(y),
+		f32(position.x + TEXTURE_WIDTH / 2),
+		f32(position.y),
 		f32(TEXTURE_WIDTH / 2 * math.sqrt(f16(5))),
 		f32(TEXTURE_HEIGHT / 2 * math.sqrt(f16(5))),
 	}
 
 	// rl.DrawRectanglePro(destRect, rl.Vector2{0.0, 0.0}, 63.4, rl.Color{255, 0, 0, 100})
 	rl.DrawCircle(
-		i32(x + TEXTURE_WIDTH / 2),
-		i32(y + TEXTURE_HEIGHT / 4),
+		i32(position.x + TEXTURE_WIDTH / 2),
+		i32(position.y + TEXTURE_HEIGHT / 4),
 		f32(TEXTURE_WIDTH / 6),
 		rl.Color{0, 0, 255, 100},
 	)
 }
 
-updateCamera :: proc(character_state: ^CharacterState, camera: ^rl.Camera2D) {
-	xPos, yPos := characterTilePositionToScreenPosition(character_state.position)
-	camera.target = rl.Vector2{f32(xPos), f32(yPos)}
+update_camera :: proc(character_state: ^CharacterState, camera: ^rl.Camera2D) {
+	position := tile_position_to_screen_position(character_state.position, TextureType.Character)
+	camera.target = rl.Vector2{f32(position.x), f32(position.y)}
 }
 
-initializeEnemies :: proc() -> [4]CharacterState {
+initialize_enemies :: proc() -> [4]CharacterState {
 	enemies: [4]CharacterState
 	for i in 0 ..< 4 {
 		enemies[i] = {
@@ -705,14 +642,14 @@ initializeEnemies :: proc() -> [4]CharacterState {
 	return enemies
 }
 
-placeCharacters :: proc(game_state: ^GameState, character_state: ^CharacterState) {
-	available_positions: [dynamic]Position
+place_characters :: proc(game_state: ^GameState, character_state: ^CharacterState) {
+	available_positions: [dynamic]TilePosition
 	defer delete(available_positions)
 
 	for row in 0 ..< GRID_HEIGHT {
 		for col in 0 ..< GRID_WIDTH {
 			if game_state.game_map_boolean[row][col] {
-				append(&available_positions, Position{col, row})
+				append(&available_positions, TilePosition{col, row})
 			}
 		}
 	}
