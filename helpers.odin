@@ -890,10 +890,23 @@ draw_main_menu :: proc(game_state: ^GameState) {
 	}
 }
 
-// Draw Game Over
 draw_game_over :: proc(game_state: ^GameState) {
 	textWidth := rl.MeasureText("GAME OVER", 40)
+
+	// Draw GAME OVER text
 	rl.DrawText("GAME OVER", (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 2 - 20, 40, rl.RED)
+
+	// Draw score
+	text := strings.concatenate({"Score: ", int_to_string(game_state.score)})
+	textC: cstring = strings.unsafe_string_to_cstring(text)
+	textWidth = rl.MeasureText(textC, 20)
+	rl.DrawText(textC, WINDOW_WIDTH / 2 - textWidth / 2, WINDOW_HEIGHT / 2 + 30, 20, rl.BLACK)
+
+	// Draw total duration
+	text = strings.concatenate({"Total Time: ", int_to_string(int(game_state.total_duration))})
+	textC = strings.unsafe_string_to_cstring(text)
+	textWidth = rl.MeasureText(textC, 20)
+	rl.DrawText(textC, WINDOW_WIDTH / 2 - textWidth / 2, WINDOW_HEIGHT / 2 + 60, 20, rl.BLACK)
 }
 
 reset_game :: proc(game_state: ^GameState, character_state: ^CharacterState) {
@@ -901,5 +914,6 @@ reset_game :: proc(game_state: ^GameState, character_state: ^CharacterState) {
 	game_state.score = 0
 	game_state.main_menu_index = 0
 	game_state.counter = 0.0
+	game_state.total_duration = 0.0
 	place_characters(game_state, character_state)
 }
