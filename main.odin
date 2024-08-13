@@ -23,17 +23,19 @@ main :: proc() {
 	enemies: [4]CharacterState = initialize_enemies()
 
 	game_state: GameState = GameState {
-		mode               = GameMode.MainMenu,
-		game_map           = gameMap,
-		game_map_boolean   = gameMapBoolean,
-		tile_edit_position = {0, 0},
-		enemies            = enemies,
-		main_menu_index    = 0,
-		counter            = 0.0,
-		difficulty         = GameDifficulty.Easy,
-		score              = 0,
-		score_coefficient  = 1,
-		total_duration     = 0.0,
+		mode                 = GameMode.MainMenu,
+		game_map             = gameMap,
+		game_map_boolean     = gameMapBoolean,
+		tile_edit_position   = {0, 0},
+		enemies              = enemies,
+		main_menu_index      = 0,
+		counter              = 0.0,
+		difficulty           = GameDifficulty.Easy,
+		score                = 0,
+		score_coefficient    = 1,
+		total_duration       = 0.0,
+		collected_count      = 0,
+		collectible_position = {},
 	}
 
 	// Initialize Character State
@@ -48,6 +50,9 @@ main :: proc() {
 
 	// Randomly place character and enemies
 	place_characters(&game_state, &character_state)
+
+	// Randomly place collectible
+	place_collectible(&game_state, &character_state)
 
 	// Initialize Camera
 	camera := rl.Camera2D{rl.Vector2{WINDOW_WIDTH / 2, 0.0}, rl.Vector2{0.0, 0.0}, 0.0, 1.0}
@@ -73,9 +78,6 @@ main :: proc() {
 
 			// Handling Input
 			handle_input(&game_state, &character_state, &camera)
-
-			// Check collisions
-			if check_collision(&game_state, &character_state) do game_state.mode = GameMode.GameOver
 
 			// Draw Game
 			draw_normal_mode(&game_state, &character_state, &textureMap)

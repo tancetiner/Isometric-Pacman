@@ -204,6 +204,18 @@ handle_input :: proc(
 
 update_state :: proc(game_state: ^GameState, character_state: ^CharacterState) {
 	delta_time := rl.GetFrameTime()
+	game_state.score_coefficient = int(math.floor(game_state.total_duration / 15.0)) + 1
+
+	// Check collision between character and enemies
+	if check_collision_between_character_and_enemies(game_state, character_state) do game_state.mode = GameMode.GameOver
+
+	// Check collision between character and collectible
+	if check_collision_between_character_and_collectible(game_state, character_state) {
+		game_state.collected_count += 1
+		game_state.score += 10 * game_state.score_coefficient
+		place_collectible(game_state, character_state)
+	}
+
 
 	// Update game GameState
 	game_state.counter += delta_time
@@ -562,8 +574,18 @@ draw_normal_mode :: proc(
 		)
 	}
 
+	// Draw collectible
+	position = tile_position_to_screen_position(game_state.collectible_position)
+
+	rl.DrawCircle(
+		i32(position.x + TEXTURE_WIDTH / 2),
+		i32(position.y + TEXTURE_HEIGHT / 4),
+		f32(TEXTURE_WIDTH / 6),
+		rl.RED,
+	)
+
+
 	// Update Score
-	game_state.score_coefficient = int(math.floor(game_state.total_duration / 15.0)) + 1
 	if game_state.counter > 1.0 {
 		game_state.counter = 0.0
 		game_state.score += 1 * game_state.score_coefficient
@@ -779,12 +801,23 @@ place_characters :: proc(game_state: ^GameState, character_state: ^CharacterStat
 	// Place enemies
 	for i in 0 ..< 4 {
 		idx := rand.int31() % i32(len(available_positions))
+		for math.abs(
+			    available_positions[idx].x -
+			    character_state.position.x +
+			    math.abs(available_positions[idx].y - character_state.position.y),
+		    ) <
+		    6 {
+			idx = rand.int31() % i32(len(available_positions))
+		}
 		game_state.enemies[i].position = available_positions[idx]
 		unordered_remove(&available_positions, int(idx))
 	}
 }
 
-check_collision :: proc(game_state: ^GameState, character_state: ^CharacterState) -> bool {
+check_collision_between_character_and_enemies :: proc(
+	game_state: ^GameState,
+	character_state: ^CharacterState,
+) -> bool {
 	x, y := character_state.position.x, character_state.position.y
 
 	for i in 0 ..< 4 {
@@ -838,14 +871,8 @@ gameDifficultyToString := map[GameDifficulty]string {
 
 // Draw Main Menu
 draw_main_menu :: proc(game_state: ^GameState) {
-	textWidth := rl.MeasureText("ISOMETRIC PACMAN", 40)
-	rl.DrawText(
-		"ISOMETRIC PACMAN",
-		(WINDOW_WIDTH - textWidth) / 2,
-		WINDOW_HEIGHT * 2 / 10,
-		40,
-		rl.RED,
-	)
+	textWidth := rl.MeasureText("ISOMETRIC PACMAN", 50)
+	rl.DrawText("ISOMETRIC PACMAN", (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 4, 50, rl.RED)
 
 	rectangleColors := [4]rl.Color{rl.BLACK, rl.BLACK, rl.BLACK, rl.BLACK}
 	rectangleColors[game_state.main_menu_index] = rl.RED
@@ -891,22 +918,31 @@ draw_main_menu :: proc(game_state: ^GameState) {
 }
 
 draw_game_over :: proc(game_state: ^GameState) {
-	textWidth := rl.MeasureText("GAME OVER", 40)
-
 	// Draw GAME OVER text
-	rl.DrawText("GAME OVER", (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 2 - 20, 40, rl.RED)
+	textWidth := rl.MeasureText("GAME OVER", 50)
+	rl.DrawText("GAME OVER", (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 4, 50, rl.RED)
 
 	// Draw score
 	text := strings.concatenate({"Score: ", int_to_string(game_state.score)})
 	textC: cstring = strings.unsafe_string_to_cstring(text)
-	textWidth = rl.MeasureText(textC, 20)
-	rl.DrawText(textC, WINDOW_WIDTH / 2 - textWidth / 2, WINDOW_HEIGHT / 2 + 30, 20, rl.BLACK)
+	textWidth = rl.MeasureText(textC, 30)
+	rl.DrawText(textC, (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 2, 30, rl.BLACK)
+
+	// Draw number of collected
+	text = strings.concatenate(
+		{"Collected: ", int_to_string(game_state.collected_count), " items."},
+	)
+	textC = strings.unsafe_string_to_cstring(text)
+	textWidth = rl.MeasureText(textC, 30)
+	rl.DrawText(textC, (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 2 + 45, 30, rl.BLACK)
 
 	// Draw total duration
-	text = strings.concatenate({"Total Time: ", int_to_string(int(game_state.total_duration))})
+	text = strings.concatenate(
+		{"Total Time: ", int_to_string(int(game_state.total_duration)), " seconds."},
+	)
 	textC = strings.unsafe_string_to_cstring(text)
-	textWidth = rl.MeasureText(textC, 20)
-	rl.DrawText(textC, WINDOW_WIDTH / 2 - textWidth / 2, WINDOW_HEIGHT / 2 + 60, 20, rl.BLACK)
+	textWidth = rl.MeasureText(textC, 30)
+	rl.DrawText(textC, (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 2 + 90, 30, rl.BLACK)
 }
 
 reset_game :: proc(game_state: ^GameState, character_state: ^CharacterState) {
@@ -915,5 +951,39 @@ reset_game :: proc(game_state: ^GameState, character_state: ^CharacterState) {
 	game_state.main_menu_index = 0
 	game_state.counter = 0.0
 	game_state.total_duration = 0.0
+	game_state.collected_count = 0
+	game_state.collectible_position = {}
 	place_characters(game_state, character_state)
+	place_collectible(game_state, character_state)
+}
+
+check_collision_between_character_and_collectible :: proc(
+	game_state: ^GameState,
+	character_state: ^CharacterState,
+) -> bool {
+	if character_state.position.x == game_state.collectible_position.x &&
+	   character_state.position.y == game_state.collectible_position.y {
+		return true
+	}
+
+	return false
+}
+
+place_collectible :: proc(game_state: ^GameState, character_state: ^CharacterState) {
+	availablePositions: [dynamic]TilePosition
+	defer delete(availablePositions)
+	characterPosition := character_state.position
+
+	for row in 0 ..< GRID_HEIGHT {
+		for col in 0 ..< GRID_WIDTH {
+			if game_state.game_map_boolean[row][col] &&
+			   (math.abs(col - characterPosition.x) + math.abs(row - characterPosition.y)) > 5 {
+				append(&availablePositions, TilePosition{col, row})
+			}
+		}
+	}
+
+	// Place collectible
+	idx := rand.int31() % i32(len(availablePositions))
+	game_state.collectible_position = availablePositions[idx]
 }
