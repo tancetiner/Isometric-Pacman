@@ -9,7 +9,7 @@ GameState :: struct {
 	game_map:             [GRID_HEIGHT][GRID_WIDTH]rune,
 	game_map_boolean:     [GRID_HEIGHT][GRID_WIDTH]bool,
 	tile_edit_position:   TilePosition,
-	enemies:              [4]CharacterState,
+	enemies:              [dynamic]CharacterState,
 	main_menu_index:      int,
 	difficulty:           GameDifficulty,
 	counter:              f32,

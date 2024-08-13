@@ -231,7 +231,7 @@ update_state :: proc(game_state: ^GameState, character_state: ^CharacterState) {
 	}
 
 	// Update enemies state
-	for i in 0 ..< 4 {
+	for i in 0 ..< gameDifficultyToNumberOfEnemies[game_state.difficulty] {
 		enemy_state := &game_state.enemies[i]
 		enemy_state.movement_time_counter += delta_time
 		enemy_state.pose_time_counter += delta_time
@@ -547,7 +547,7 @@ draw_normal_mode :: proc(
 	)
 
 	// Render enemies
-	for i in 0 ..< 4 {
+	for i in 0 ..< gameDifficultyToNumberOfEnemies[game_state.difficulty] {
 		enemy_state := game_state.enemies[i]
 		position := tile_position_to_screen_position(enemy_state.position, TextureType.Enemy)
 
@@ -751,7 +751,6 @@ draw_tile_editor_mode :: proc(game_state: ^GameState, texture_map: ^map[string]r
 		f32(TEXTURE_HEIGHT / 2 * math.sqrt(f16(5))),
 	}
 
-	// rl.DrawRectanglePro(destRect, rl.Vector2{0.0, 0.0}, 63.4, rl.Color{255, 0, 0, 100})
 	rl.DrawCircle(
 		i32(position.x + TEXTURE_WIDTH / 2),
 		i32(position.y + TEXTURE_HEIGHT / 4),
@@ -765,20 +764,20 @@ update_camera :: proc(character_state: ^CharacterState, camera: ^rl.Camera2D) {
 	camera.target = rl.Vector2{f32(position.x), f32(position.y)}
 }
 
-initialize_enemies :: proc() -> [4]CharacterState {
-	enemies: [4]CharacterState
-	for i in 0 ..< 4 {
-		enemies[i] = {
-			pose                  = 0,
-			pose_time_counter     = 0.0,
-			movement_time_counter = 0.0,
-			action                = CharacterAction.Standing,
-			position              = {i + 1, i + 1},
-			direction             = Direction.Down,
-		}
+initialize_enemies :: proc(game_state: ^GameState) {
+	for i in 0 ..< gameDifficultyToNumberOfEnemies[game_state.difficulty] {
+		append(
+			&game_state.enemies,
+			CharacterState {
+				pose = 0,
+				pose_time_counter = 0.0,
+				movement_time_counter = 0.0,
+				action = CharacterAction.Walking,
+				position = {i + 1, i + 1},
+				direction = Direction.Down,
+			},
+		)
 	}
-
-	return enemies
 }
 
 place_characters :: proc(game_state: ^GameState, character_state: ^CharacterState) {
@@ -799,7 +798,7 @@ place_characters :: proc(game_state: ^GameState, character_state: ^CharacterStat
 	unordered_remove(&available_positions, int(idx))
 
 	// Place enemies
-	for i in 0 ..< 4 {
+	for i in 0 ..< gameDifficultyToNumberOfEnemies[game_state.difficulty] {
 		idx := rand.int31() % i32(len(available_positions))
 		for math.abs(
 			    available_positions[idx].x -
@@ -820,7 +819,7 @@ check_collision_between_character_and_enemies :: proc(
 ) -> bool {
 	x, y := character_state.position.x, character_state.position.y
 
-	for i in 0 ..< 4 {
+	for i in 0 ..< gameDifficultyToNumberOfEnemies[game_state.difficulty] {
 		enemy_state := game_state.enemies[i]
 		if enemy_state.position.x == x && enemy_state.position.y == y do return true
 	}
@@ -828,7 +827,7 @@ check_collision_between_character_and_enemies :: proc(
 	return false
 }
 
-handle_input_main_menu :: proc(game_state: ^GameState) {
+handle_input_main_menu :: proc(game_state: ^GameState, character_state: ^CharacterState) {
 	using rl.KeyboardKey
 	idx := game_state.main_menu_index
 
@@ -837,6 +836,7 @@ handle_input_main_menu :: proc(game_state: ^GameState) {
 	if rl.IsKeyPressed(.KP_ENTER) || rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.SPACE) {
 		switch idx {
 		case 0:
+			reset_game(game_state, character_state)
 			game_state.mode = GameMode.PlayGame
 		case 1:
 			game_state.mode = GameMode.TileEditor
@@ -946,13 +946,14 @@ draw_game_over :: proc(game_state: ^GameState) {
 }
 
 reset_game :: proc(game_state: ^GameState, character_state: ^CharacterState) {
-	game_state.mode = GameMode.MainMenu
 	game_state.score = 0
 	game_state.main_menu_index = 0
 	game_state.counter = 0.0
 	game_state.total_duration = 0.0
 	game_state.collected_count = 0
 	game_state.collectible_position = {}
+	clear(&game_state.enemies)
+	initialize_enemies(game_state)
 	place_characters(game_state, character_state)
 	place_collectible(game_state, character_state)
 }
@@ -986,4 +987,10 @@ place_collectible :: proc(game_state: ^GameState, character_state: ^CharacterSta
 	// Place collectible
 	idx := rand.int31() % i32(len(availablePositions))
 	game_state.collectible_position = availablePositions[idx]
+}
+
+gameDifficultyToNumberOfEnemies := map[GameDifficulty]int {
+	GameDifficulty.Easy   = 4,
+	GameDifficulty.Medium = 6,
+	GameDifficulty.Hard   = 8,
 }

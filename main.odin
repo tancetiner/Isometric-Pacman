@@ -19,15 +19,12 @@ main :: proc() {
 	// Initialize Game State
 	gameMap, gameMapBoolean := read_map("./assets/map.txt")
 
-	// Initialize Enemies
-	enemies: [4]CharacterState = initialize_enemies()
-
 	game_state: GameState = GameState {
 		mode                 = GameMode.MainMenu,
 		game_map             = gameMap,
 		game_map_boolean     = gameMapBoolean,
 		tile_edit_position   = {0, 0},
-		enemies              = enemies,
+		enemies              = {},
 		main_menu_index      = 0,
 		counter              = 0.0,
 		difficulty           = GameDifficulty.Easy,
@@ -37,6 +34,9 @@ main :: proc() {
 		collected_count      = 0,
 		collectible_position = {},
 	}
+
+	// Initialize Enemies
+	initialize_enemies(&game_state)
 
 	// Initialize Character State
 	character_state: CharacterState = CharacterState {
@@ -65,7 +65,7 @@ main :: proc() {
 		switch game_state.mode {
 		case GameMode.MainMenu:
 			// Handling Input
-			handle_input_main_menu(&game_state)
+			handle_input_main_menu(&game_state, &character_state)
 
 			// Draw Main Menu
 			draw_main_menu(&game_state)
@@ -100,7 +100,7 @@ main :: proc() {
 			game_state.counter += rl.GetFrameTime()
 
 			// Check if counter is greater than 3 seconds
-			if game_state.counter > 3.0 do reset_game(&game_state, &character_state)
+			if game_state.counter > 3.0 do game_state.mode = GameMode.MainMenu
 
 			// Draw Game Over
 			draw_game_over(&game_state)
