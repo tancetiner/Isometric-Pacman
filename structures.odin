@@ -13,6 +13,9 @@ GameState :: struct {
 	main_menu_index:    int,
 	difficulty:         GameDifficulty,
 	counter:            f32,
+	score:              int,
+	score_coefficient:  int,
+	total_duration:     f32,
 }
 
 CharacterState :: struct {

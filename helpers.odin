@@ -202,8 +202,12 @@ handle_input :: proc(
 	}
 }
 
-update_character_state :: proc(game_state: ^GameState, character_state: ^CharacterState) {
+update_state :: proc(game_state: ^GameState, character_state: ^CharacterState) {
 	delta_time := rl.GetFrameTime()
+
+	// Update game GameState
+	game_state.counter += delta_time
+	game_state.total_duration += delta_time
 
 	// Update character state
 	character_state.movement_time_counter += delta_time
@@ -557,12 +561,39 @@ draw_normal_mode :: proc(
 			rl.WHITE,
 		)
 	}
+
+	// Update Score
+	game_state.score_coefficient = int(math.floor(game_state.total_duration / 15.0)) + 1
+	if game_state.counter > 1.0 {
+		game_state.counter = 0.0
+		game_state.score += 1 * game_state.score_coefficient
+	}
+
+	// Render Score
+	text := strings.concatenate({"Score: ", int_to_string(game_state.score)})
+	// text := strings.concatenate({"Score: "})
+	textC := strings.unsafe_string_to_cstring(text)
+	// textC := f32_to_cstring(game_state.counter / 60)
+	textWidth := rl.MeasureText(textC, 20)
+	rl.DrawText(textC, WINDOW_WIDTH / 2 - textWidth - 10, 10, 20, rl.BLACK)
 }
 
 f32_to_cstring :: proc(f: f32) -> cstring {
 	builder := strings.builder_make()
 	strings.write_f32(&builder, f, 'f')
 	return strings.to_cstring(&builder)
+}
+
+f32_to_string :: proc(f: f32) -> string {
+	builder := strings.builder_make()
+	strings.write_f32(&builder, f, 'f')
+	return strings.to_string(builder)
+}
+
+int_to_string :: proc(i: int) -> string {
+	builder := strings.builder_make()
+	strings.write_int(&builder, i)
+	return strings.to_string(builder)
 }
 
 handle_input_tile_editor :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
@@ -761,8 +792,6 @@ check_collision :: proc(game_state: ^GameState, character_state: ^CharacterState
 		if enemy_state.position.x == x && enemy_state.position.y == y do return true
 	}
 
-	game_state.counter = 0.0
-
 	return false
 }
 
@@ -869,6 +898,7 @@ draw_game_over :: proc(game_state: ^GameState) {
 
 reset_game :: proc(game_state: ^GameState, character_state: ^CharacterState) {
 	game_state.mode = GameMode.MainMenu
+	game_state.score = 0
 	game_state.main_menu_index = 0
 	game_state.counter = 0.0
 	place_characters(game_state, character_state)

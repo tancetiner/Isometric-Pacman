@@ -31,6 +31,9 @@ main :: proc() {
 		main_menu_index    = 0,
 		counter            = 0.0,
 		difficulty         = GameDifficulty.Easy,
+		score              = 0,
+		score_coefficient  = 1,
+		total_duration     = 0.0,
 	}
 
 	// Initialize Character State
@@ -47,15 +50,7 @@ main :: proc() {
 	place_characters(&game_state, &character_state)
 
 	// Initialize Camera
-	// xPos, yPos := characterTilePositionToScreenPosition(character_state.position)
-	camera := rl.Camera2D {
-		// rl.Vector2{WINDOW_WIDTH / 2, WINDOW_HEIGHT / 2},
-		// rl.Vector2{xPos, yPos},
-		rl.Vector2{WINDOW_WIDTH / 2, 0.0},
-		rl.Vector2{0.0, 0.0},
-		0.0,
-		0.8,
-	}
+	camera := rl.Camera2D{rl.Vector2{WINDOW_WIDTH / 2, 0.0}, rl.Vector2{0.0, 0.0}, 0.0, 1.0}
 
 	// Main game loop
 	gameloop: for true {
@@ -73,17 +68,14 @@ main :: proc() {
 		case GameMode.PlayGame:
 			rl.BeginMode2D(camera)
 
-			// Update character state
-			update_character_state(&game_state, &character_state)
+			// Update game and character state
+			update_state(&game_state, &character_state)
 
 			// Handling Input
 			handle_input(&game_state, &character_state, &camera)
 
 			// Check collisions
 			if check_collision(&game_state, &character_state) do game_state.mode = GameMode.GameOver
-
-			// Update Camera
-			// update_camera(&character_state, &camera)
 
 			// Draw Game
 			draw_normal_mode(&game_state, &character_state, &textureMap)
