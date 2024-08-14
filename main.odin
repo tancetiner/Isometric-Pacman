@@ -33,6 +33,7 @@ main :: proc() {
 		total_duration       = 0.0,
 		collected_count      = 0,
 		collectible_position = {},
+		high_scores          = read_high_scores(),
 	}
 
 	// Initialize Enemies
@@ -100,7 +101,13 @@ main :: proc() {
 			game_state.counter += rl.GetFrameTime()
 
 			// Check if counter is greater than 3 seconds
-			if game_state.counter > 3.0 do game_state.mode = GameMode.MainMenu
+			if game_state.counter > 3.0 {
+				if game_state.score > game_state.high_scores[game_state.difficulty] {
+					game_state.high_scores[game_state.difficulty] = game_state.score
+					write_high_scores(game_state.high_scores)
+				}
+				game_state.mode = GameMode.MainMenu
+			}
 
 			// Draw Game Over
 			draw_game_over(&game_state)

@@ -1,5 +1,6 @@
 package main
 
+import "core:encoding/json"
 import "core:fmt"
 import "core:math"
 import "core:math/rand"
@@ -125,17 +126,15 @@ move_character :: proc(character_state: ^CharacterState, game_state: ^GameState)
 }
 
 load_textures :: proc() -> map[string]rl.Texture2D {
-	return(
-		(map[string]rl.Texture2D) {
-			"floor" = rl.LoadTexture("assets/floor.png"),
-			"character_front" = rl.LoadTexture("assets/character_front.png"),
-			"character_back" = rl.LoadTexture("assets/character_back.png"),
-			"enemy_up" = rl.LoadTexture("assets/enemy_up.png"),
-			"enemy_down" = rl.LoadTexture("assets/enemy_down.png"),
-			"enemy_left" = rl.LoadTexture("assets/enemy_left.png"),
-			"enemy_right" = rl.LoadTexture("assets/enemy_right.png"),
-		} \
-	)
+	return ((map[string]rl.Texture2D) {
+				"floor" = rl.LoadTexture("assets/floor.png"),
+				"character_front" = rl.LoadTexture("assets/character_front.png"),
+				"character_back" = rl.LoadTexture("assets/character_back.png"),
+				"enemy_up" = rl.LoadTexture("assets/enemy_up.png"),
+				"enemy_down" = rl.LoadTexture("assets/enemy_down.png"),
+				"enemy_left" = rl.LoadTexture("assets/enemy_left.png"),
+				"enemy_right" = rl.LoadTexture("assets/enemy_right.png"),
+			})
 }
 
 handle_input :: proc(
@@ -476,14 +475,12 @@ character_texture_source_rect :: proc(character_state: ^CharacterState) -> rl.Re
 		}
 	}
 
-	return(
-		rl.Rectangle {
-			xPos,
-			yPos,
-			f32(flipConstant) * CHARACTER_TEXTURE_SIZE,
-			CHARACTER_TEXTURE_SIZE,
-		} \
-	)
+	return (rl.Rectangle {
+				xPos,
+				yPos,
+				f32(flipConstant) * CHARACTER_TEXTURE_SIZE,
+				CHARACTER_TEXTURE_SIZE,
+			})
 }
 
 enemy_texture_source_rect :: proc(character_state: ^CharacterState) -> rl.Rectangle {
@@ -915,6 +912,25 @@ draw_main_menu :: proc(game_state: ^GameState) {
 			rl.RAYWHITE,
 		)
 	}
+
+	// Draw high scores
+	text := strings.concatenate(
+		{
+			"High Scores\n\n\n",
+			"Easy: ",
+			int_to_string(game_state.high_scores[GameDifficulty.Easy]),
+			"\n\n",
+			"Medium: ",
+			int_to_string(game_state.high_scores[GameDifficulty.Medium]),
+			"\n\n",
+			"Hard: ",
+			int_to_string(game_state.high_scores[GameDifficulty.Hard]),
+		},
+	)
+	textC: cstring = strings.unsafe_string_to_cstring(text)
+	textWidth = rl.MeasureText(textC, 20)
+	rl.DrawText(textC, WINDOW_WIDTH - textWidth - 10, WINDOW_HEIGHT - 140, 20, rl.BLACK)
+
 }
 
 draw_game_over :: proc(game_state: ^GameState) {
@@ -943,6 +959,18 @@ draw_game_over :: proc(game_state: ^GameState) {
 	textC = strings.unsafe_string_to_cstring(text)
 	textWidth = rl.MeasureText(textC, 30)
 	rl.DrawText(textC, (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 2 + 90, 30, rl.BLACK)
+
+	// Draw NEW RECORD if it is a new record
+	if game_state.score > game_state.high_scores[game_state.difficulty] {
+		textWidth = rl.MeasureText("NEW RECORD", 50)
+		rl.DrawText(
+			"NEW RECORD",
+			(WINDOW_WIDTH - textWidth) / 2,
+			WINDOW_HEIGHT / 2 + 135,
+			50,
+			rl.RED,
+		)
+	}
 }
 
 reset_game :: proc(game_state: ^GameState, character_state: ^CharacterState) {
@@ -993,4 +1021,85 @@ gameDifficultyToNumberOfEnemies := map[GameDifficulty]int {
 	GameDifficulty.Easy   = 4,
 	GameDifficulty.Medium = 6,
 	GameDifficulty.Hard   = 8,
+}
+
+read_high_scores :: proc() -> map[GameDifficulty]int {
+
+	emptyMap := map[GameDifficulty]int {
+		GameDifficulty.Easy   = -1,
+		GameDifficulty.Medium = -1,
+		GameDifficulty.Hard   = -1,
+	}
+
+	file, err := os.open("assets/high_scores.json")
+	if err != nil {
+		return emptyMap
+	}
+	defer os.close(file)
+
+	data, success := os.read_entire_file(file)
+
+	if !success {
+		return emptyMap
+	}
+
+	value, error := json.parse(data)
+
+	if error != nil {
+		return emptyMap
+	}
+
+	json_object, is_object := value.(json.Object)
+
+	if !is_object {
+		return emptyMap
+	}
+
+	return map[GameDifficulty]int {
+		GameDifficulty.Easy = int(json_object["easy"].(json.Float)),
+		GameDifficulty.Medium = int(json_object["medium"].(json.Float)),
+		GameDifficulty.Hard = int(json_object["hard"].(json.Float)),
+	}
+}
+
+write_high_scores :: proc(high_scores: map[GameDifficulty]int) {
+	stringBuilder, builderErr := strings.builder_make_none()
+
+	if builderErr != nil {
+		return
+	}
+
+	// Build the json string with stringBuilder
+	strings.write_string(
+		&stringBuilder,
+		strings.concatenate(
+			{"{\n\"easy\": ", int_to_string(high_scores[GameDifficulty.Easy]), ","},
+		),
+	)
+	strings.write_string(
+		&stringBuilder,
+		strings.concatenate(
+			{"\n\"medium\": ", int_to_string(high_scores[GameDifficulty.Medium]), ","},
+		),
+	)
+	strings.write_string(
+		&stringBuilder,
+		strings.concatenate(
+			{"\n\"hard\": ", int_to_string(high_scores[GameDifficulty.Hard]), "\n}"},
+		),
+	)
+
+	json_string := strings.to_string(stringBuilder)
+
+	fmt.println(json_string)
+
+	file, fileOpenErr := os.open("assets/high_scores.json")
+	if fileOpenErr != nil {
+		return
+	}
+	defer os.close(file)
+
+	data := transmute([]u8)json_string
+
+	os.write(file, data)
 }

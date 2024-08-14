@@ -18,6 +18,7 @@ GameState :: struct {
 	total_duration:       f32,
 	collectible_position: TilePosition,
 	collected_count:      int,
+	high_scores:          map[GameDifficulty]int,
 }
 
 CharacterState :: struct {
