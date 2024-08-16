@@ -25,7 +25,7 @@ main :: proc() {
 		game_map_boolean     = gameMapBoolean,
 		tile_edit_position   = {0, 0},
 		enemies              = {},
-		main_menu_index      = 0,
+		menu_index           = 0,
 		counter              = 0.0,
 		difficulty           = GameDifficulty.Easy,
 		score                = 0,
@@ -100,12 +100,9 @@ main :: proc() {
 			// Update counter
 			game_state.counter += rl.GetFrameTime()
 
-			// Check if counter is greater than 3 seconds
+			// Counter to go back to main menu
 			if game_state.counter > 3.0 {
-				if game_state.score > game_state.high_scores[game_state.difficulty] {
-					game_state.high_scores[game_state.difficulty] = game_state.score
-					write_high_scores(game_state.high_scores)
-				}
+				check_high_score(&game_state)
 				game_state.mode = GameMode.MainMenu
 			}
 

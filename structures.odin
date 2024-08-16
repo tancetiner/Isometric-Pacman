@@ -9,8 +9,6 @@ GameState :: struct {
 	game_map:             [GRID_HEIGHT][GRID_WIDTH]rune,
 	game_map_boolean:     [GRID_HEIGHT][GRID_WIDTH]bool,
 	tile_edit_position:   TilePosition,
-	enemies:              [dynamic]CharacterState,
-	main_menu_index:      int,
 	difficulty:           GameDifficulty,
 	counter:              f32,
 	score:                int,
@@ -19,6 +17,9 @@ GameState :: struct {
 	collectible_position: TilePosition,
 	collected_count:      int,
 	high_scores:          map[GameDifficulty]int,
+	is_paused:            bool,
+	menu_index:           int,
+	enemies:              [dynamic]CharacterState,
 }
 
 CharacterState :: struct {

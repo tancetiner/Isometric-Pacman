@@ -126,82 +126,23 @@ move_character :: proc(character_state: ^CharacterState, game_state: ^GameState)
 }
 
 load_textures :: proc() -> map[string]rl.Texture2D {
-	return ((map[string]rl.Texture2D) {
-				"floor" = rl.LoadTexture("assets/floor.png"),
-				"character_front" = rl.LoadTexture("assets/character_front.png"),
-				"character_back" = rl.LoadTexture("assets/character_back.png"),
-				"enemy_up" = rl.LoadTexture("assets/enemy_up.png"),
-				"enemy_down" = rl.LoadTexture("assets/enemy_down.png"),
-				"enemy_left" = rl.LoadTexture("assets/enemy_left.png"),
-				"enemy_right" = rl.LoadTexture("assets/enemy_right.png"),
-			})
+	return(
+		(map[string]rl.Texture2D) {
+			"floor" = rl.LoadTexture("assets/floor.png"),
+			"character_front" = rl.LoadTexture("assets/character_front.png"),
+			"character_back" = rl.LoadTexture("assets/character_back.png"),
+			"enemy_up" = rl.LoadTexture("assets/enemy_up.png"),
+			"enemy_down" = rl.LoadTexture("assets/enemy_down.png"),
+			"enemy_left" = rl.LoadTexture("assets/enemy_left.png"),
+			"enemy_right" = rl.LoadTexture("assets/enemy_right.png"),
+		} \
+	)
 }
 
-handle_input :: proc(
-	game_state: ^GameState,
-	character_state: ^CharacterState,
-	camera: ^rl.Camera2D,
-) {
-	using rl.KeyboardKey
-
-	// Character Movement
-	isTimeToMove := character_state.movement_time_counter > CHARACTER_MOVEMENT_INTERVAL
-	if isTimeToMove do character_state.movement_time_counter = 0
-	character_state.action = CharacterAction.Standing
-	character_on_the_move := false
-
-
-	if (rl.IsKeyDown(.RIGHT) || rl.IsKeyDown(.DOWN) || rl.IsKeyDown(.UP) || rl.IsKeyDown(.LEFT)) do character_state.action = CharacterAction.Walking
-
-	direction := Direction.None
-	if rl.IsKeyDown(.RIGHT) {
-		direction = Direction.Right
-	} else if rl.IsKeyDown(.LEFT) {
-		direction = Direction.Left
-	} else if rl.IsKeyDown(.UP) {
-		direction = Direction.Up
-	} else if rl.IsKeyDown(.DOWN) {
-		direction = Direction.Down
-	}
-
-	if direction != Direction.None {
-		if character_state.direction != direction || isTimeToMove {
-			if character_state.direction != direction do character_state.movement_time_counter = 0.0
-			character_state.movement_time_counter = 0.0
-			character_state.direction = direction
-			character_on_the_move = true
-		}
-	} else if rl.IsKeyPressed(.M) {
-		game_state.mode = GameMode.TileEditor
-	}
-
-	if character_on_the_move do move_character(character_state, game_state)
-
-	// Map scrolling
-	if rl.IsKeyDown(.W) {
-		camera.target.y -= 10
-	} else if rl.IsKeyDown(.S) {
-		camera.target.y += 10
-	} else if rl.IsKeyDown(.A) {
-		camera.target.x -= 10
-	} else if rl.IsKeyDown(.D) {
-		camera.target.x += 10
-	}
-
-	// Zoom control
-	if rl.IsKeyDown(.Q) {
-		camera.zoom += 0.02
-	} else if rl.IsKeyDown(.E) {
-		camera.zoom -= 0.02
-	}
-
-	// Go back to main menu
-	if rl.IsKeyPressed(.ESCAPE) {
-		game_state.mode = GameMode.MainMenu
-	}
-}
 
 update_state :: proc(game_state: ^GameState, character_state: ^CharacterState) {
+	if game_state.is_paused do return
+
 	delta_time := rl.GetFrameTime()
 	game_state.score_coefficient = int(math.floor(game_state.total_duration / 15.0)) + 1
 
@@ -475,12 +416,14 @@ character_texture_source_rect :: proc(character_state: ^CharacterState) -> rl.Re
 		}
 	}
 
-	return (rl.Rectangle {
-				xPos,
-				yPos,
-				f32(flipConstant) * CHARACTER_TEXTURE_SIZE,
-				CHARACTER_TEXTURE_SIZE,
-			})
+	return(
+		rl.Rectangle {
+			xPos,
+			yPos,
+			f32(flipConstant) * CHARACTER_TEXTURE_SIZE,
+			CHARACTER_TEXTURE_SIZE,
+		} \
+	)
 }
 
 enemy_texture_source_rect :: proc(character_state: ^CharacterState) -> rl.Rectangle {
@@ -595,6 +538,66 @@ draw_normal_mode :: proc(
 	// textC := f32_to_cstring(game_state.counter / 60)
 	textWidth := rl.MeasureText(textC, 20)
 	rl.DrawText(textC, WINDOW_WIDTH / 2 - textWidth - 10, 10, 20, rl.BLACK)
+
+	// Pause Menu
+	if game_state.is_paused {
+		horizontalOffset: i32 = -WINDOW_WIDTH / 2
+		rectangleColors := [3]rl.Color{rl.BLACK, rl.BLACK, rl.BLACK}
+		rectangleColors[game_state.menu_index] = rl.RED
+
+		// Draw the menu
+		rl.DrawRectangle(
+			horizontalOffset + WINDOW_WIDTH / 4,
+			WINDOW_HEIGHT / 4,
+			WINDOW_WIDTH / 2,
+			WINDOW_HEIGHT / 2,
+			rl.Fade(rl.BLACK, 0.8),
+		)
+		rl.DrawRectangleLines(
+			horizontalOffset + WINDOW_WIDTH / 4,
+			WINDOW_HEIGHT / 4,
+			WINDOW_WIDTH / 2,
+			WINDOW_HEIGHT / 2,
+			rl.BLACK,
+		)
+
+		textWidth = rl.MeasureText("PAUSED", 40)
+		rl.DrawText(
+			"PAUSED",
+			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
+			WINDOW_HEIGHT / 2 - 80,
+			40,
+			rl.RED,
+		)
+
+		// Draw the options
+		textWidth = rl.MeasureText("Resume", 20)
+		rl.DrawText(
+			"Resume",
+			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
+			WINDOW_HEIGHT / 2 - 30,
+			20,
+			rectangleColors[0],
+		)
+
+		textWidth = rl.MeasureText("Restart", 20)
+		rl.DrawText(
+			"Restart",
+			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
+			WINDOW_HEIGHT / 2,
+			20,
+			rectangleColors[1],
+		)
+
+		textWidth = rl.MeasureText("To Main Menu", 20)
+		rl.DrawText(
+			"To Main Menu",
+			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
+			WINDOW_HEIGHT / 2 + 30,
+			20,
+			rectangleColors[2],
+		)
+	}
 }
 
 f32_to_cstring :: proc(f: f32) -> cstring {
@@ -615,35 +618,6 @@ int_to_string :: proc(i: int) -> string {
 	return strings.to_string(builder)
 }
 
-handle_input_tile_editor :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
-	using rl.KeyboardKey
-
-	// Go back to main menu
-	if rl.IsKeyPressed(.ESCAPE) {
-		write_map(game_state, "assets/map.txt")
-		game_state.mode = GameMode.MainMenu
-	}
-
-	// Map scrolling
-	if rl.IsKeyDown(.W) do camera.target.y -= 10
-	else if rl.IsKeyDown(.S) do camera.target.y += 10
-	else if rl.IsKeyDown(.A) do camera.target.x -= 10
-	else if rl.IsKeyDown(.D) do camera.target.x += 10
-
-	// Zoom control
-	if rl.IsKeyDown(.Q) do camera.zoom += 0.02
-	else if rl.IsKeyDown(.E) do camera.zoom -= 0.02
-
-	// Change tile edit position
-	xPos, yPos := game_state.tile_edit_position.x, game_state.tile_edit_position.y
-	if rl.IsKeyPressed(.UP) && yPos > 0 do game_state.tile_edit_position.y -= 1
-	else if rl.IsKeyPressed(.DOWN) && yPos < GRID_HEIGHT - 1 do game_state.tile_edit_position.y += 1
-	else if rl.IsKeyPressed(.LEFT) && xPos > 0 do game_state.tile_edit_position.x -= 1
-	else if rl.IsKeyPressed(.RIGHT) && xPos < GRID_WIDTH - 1 do game_state.tile_edit_position.x += 1
-
-	// Change tile
-	if rl.IsKeyPressed(.SPACE) do update_tile_and_neighbors(game_state, game_state.tile_edit_position)
-}
 
 update_tile_and_neighbors :: proc(game_state: ^GameState, position: TilePosition) {
 	x, y := position.x, position.y
@@ -824,28 +798,6 @@ check_collision_between_character_and_enemies :: proc(
 	return false
 }
 
-handle_input_main_menu :: proc(game_state: ^GameState, character_state: ^CharacterState) {
-	using rl.KeyboardKey
-	idx := game_state.main_menu_index
-
-	if rl.IsKeyPressed(.DOWN) || rl.IsKeyPressed(.S) do if idx < 3 do idx += 1
-	if rl.IsKeyPressed(.UP) || rl.IsKeyPressed(.W) do if idx > 0 do idx -= 1
-	if rl.IsKeyPressed(.KP_ENTER) || rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.SPACE) {
-		switch idx {
-		case 0:
-			reset_game(game_state, character_state)
-			game_state.mode = GameMode.PlayGame
-		case 1:
-			game_state.mode = GameMode.TileEditor
-		case 2:
-			change_difficulty(game_state)
-		case 3:
-			os.exit(0)
-		}
-	}
-
-	game_state.main_menu_index = idx
-}
 
 change_difficulty :: proc(game_state: ^GameState) {
 	using GameDifficulty
@@ -872,7 +824,7 @@ draw_main_menu :: proc(game_state: ^GameState) {
 	rl.DrawText("ISOMETRIC PACMAN", (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 4, 50, rl.RED)
 
 	rectangleColors := [4]rl.Color{rl.BLACK, rl.BLACK, rl.BLACK, rl.BLACK}
-	rectangleColors[game_state.main_menu_index] = rl.RED
+	rectangleColors[game_state.menu_index] = rl.RED
 
 	rectangleWidth: i32 = WINDOW_WIDTH / 4
 	rectangleHeight: i32 = WINDOW_HEIGHT / 12
@@ -915,7 +867,7 @@ draw_main_menu :: proc(game_state: ^GameState) {
 
 	// Draw high scores
 	text := strings.concatenate(
-		{
+		 {
 			"High Scores\n\n\n",
 			"Easy: ",
 			int_to_string(game_state.high_scores[GameDifficulty.Easy]),
@@ -930,7 +882,6 @@ draw_main_menu :: proc(game_state: ^GameState) {
 	textC: cstring = strings.unsafe_string_to_cstring(text)
 	textWidth = rl.MeasureText(textC, 20)
 	rl.DrawText(textC, WINDOW_WIDTH - textWidth - 10, WINDOW_HEIGHT - 140, 20, rl.BLACK)
-
 }
 
 draw_game_over :: proc(game_state: ^GameState) {
@@ -962,9 +913,9 @@ draw_game_over :: proc(game_state: ^GameState) {
 
 	// Draw NEW RECORD if it is a new record
 	if game_state.score > game_state.high_scores[game_state.difficulty] {
-		textWidth = rl.MeasureText("NEW RECORD", 50)
+		textWidth = rl.MeasureText("NEW HIGH SCORE", 50)
 		rl.DrawText(
-			"NEW RECORD",
+			"NEW HIGH SCORE",
 			(WINDOW_WIDTH - textWidth) / 2,
 			WINDOW_HEIGHT / 2 + 135,
 			50,
@@ -975,10 +926,11 @@ draw_game_over :: proc(game_state: ^GameState) {
 
 reset_game :: proc(game_state: ^GameState, character_state: ^CharacterState) {
 	game_state.score = 0
-	game_state.main_menu_index = 0
+	game_state.menu_index = 0
 	game_state.counter = 0.0
 	game_state.total_duration = 0.0
 	game_state.collected_count = 0
+	game_state.is_paused = false
 	game_state.collectible_position = {}
 	clear(&game_state.enemies)
 	initialize_enemies(game_state)
@@ -1055,11 +1007,13 @@ read_high_scores :: proc() -> map[GameDifficulty]int {
 		return emptyMap
 	}
 
-	return map[GameDifficulty]int {
-		GameDifficulty.Easy = int(json_object["easy"].(json.Float)),
-		GameDifficulty.Medium = int(json_object["medium"].(json.Float)),
-		GameDifficulty.Hard = int(json_object["hard"].(json.Float)),
-	}
+	return(
+		map[GameDifficulty]int {
+			GameDifficulty.Easy = int(json_object["easy"].(json.Float)),
+			GameDifficulty.Medium = int(json_object["medium"].(json.Float)),
+			GameDifficulty.Hard = int(json_object["hard"].(json.Float)),
+		} \
+	)
 }
 
 write_high_scores :: proc(high_scores: map[GameDifficulty]int) {
@@ -1102,4 +1056,11 @@ write_high_scores :: proc(high_scores: map[GameDifficulty]int) {
 	data := transmute([]u8)json_string
 
 	os.write(file, data)
+}
+
+check_high_score :: proc(game_state: ^GameState) {
+	if game_state.score > game_state.high_scores[game_state.difficulty] {
+		game_state.high_scores[game_state.difficulty] = game_state.score
+		write_high_scores(game_state.high_scores)
+	}
 }
