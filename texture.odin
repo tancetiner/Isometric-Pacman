@@ -2,66 +2,132 @@ package main
 
 import rl "vendor:raylib"
 
-// A hash-map of floor type (specified with runes) to texture source rectangles
-floorTextureSourceRectMap := map[rune]rl.Rectangle {
-	'O' = rl.Rectangle{0.0, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'|' = rl.Rectangle{MAP_TEXTURE_SIZE, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'-' = rl.Rectangle{MAP_TEXTURE_SIZE * 2, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'{' = rl.Rectangle{MAP_TEXTURE_SIZE * 3, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	']' = rl.Rectangle{MAP_TEXTURE_SIZE * 4, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'}' = rl.Rectangle{MAP_TEXTURE_SIZE * 5, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'[' = rl.Rectangle{MAP_TEXTURE_SIZE * 6, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'J' = rl.Rectangle{MAP_TEXTURE_SIZE * 7, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'Z' = rl.Rectangle{MAP_TEXTURE_SIZE * 8, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'L' = rl.Rectangle{MAP_TEXTURE_SIZE * 9, 0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'T' = rl.Rectangle{0.0, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'X' = rl.Rectangle{MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'E' = rl.Rectangle{MAP_TEXTURE_SIZE * 2, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'U' = rl.Rectangle{MAP_TEXTURE_SIZE * 3, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'D' = rl.Rectangle{MAP_TEXTURE_SIZE * 4, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
-	'A' = rl.Rectangle{MAP_TEXTURE_SIZE * 5, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE, MAP_TEXTURE_SIZE},
+load_textures :: proc() -> map[string]rl.Texture2D {
+	return(
+		(map[string]rl.Texture2D) {
+			"floor" = rl.LoadTexture("assets/floor.png"),
+			"character_front" = rl.LoadTexture("assets/character_front.png"),
+			"character_back" = rl.LoadTexture("assets/character_back.png"),
+			"enemy_up" = rl.LoadTexture("assets/enemy_up.png"),
+			"enemy_down" = rl.LoadTexture("assets/enemy_down.png"),
+			"enemy_left" = rl.LoadTexture("assets/enemy_left.png"),
+			"enemy_right" = rl.LoadTexture("assets/enemy_right.png"),
+		} \
+	)
 }
 
-// A hash-map of character pose to texture source rectangles
-characterPoseTextureMap := map[int]rl.Rectangle {
-	0 = rl.Rectangle {
-		0.0,
-		CHARACTER_TEXTURE_SIZE * 2,
-		CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE,
-	},
-	1 = rl.Rectangle {
-		CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE * 2,
-		CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE,
-	},
-	2 = rl.Rectangle {
-		CHARACTER_TEXTURE_SIZE * 2,
-		CHARACTER_TEXTURE_SIZE * 2,
-		CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE,
-	},
-	3 = rl.Rectangle {
-		CHARACTER_TEXTURE_SIZE * 3,
-		CHARACTER_TEXTURE_SIZE * 2,
-		CHARACTER_TEXTURE_SIZE,
-		CHARACTER_TEXTURE_SIZE,
-	},
+floor_texture_source_rect :: proc(char: rune) -> rl.Rectangle {
+	return floorTextureSourceRectMap[char]
 }
 
-// A hash-map of enemy direction to texture file name
-enemyDirectionToTextureName: map[Direction]string = {
-	Direction.Up    = "enemy_up",
-	Direction.Down  = "enemy_down",
-	Direction.Left  = "enemy_left",
-	Direction.Right = "enemy_right",
+character_texture_source_rect :: proc(character_state: ^CharacterState) -> rl.Rectangle {
+	using Direction, CharacterAction
+
+	flipConstant: int
+	xPos, yPos: f32
+	pose: f32 = f32(character_state.pose % 4)
+
+	#partial switch character_state.direction {
+	case .Up:
+		{
+			flipConstant = -1
+			if character_state.action == .Standing {
+				yPos = 0
+			} else if character_state.action == .Walking {
+				yPos = CHARACTER_TEXTURE_SIZE
+			}
+			xPos = CHARACTER_TEXTURE_SIZE * pose
+		}
+
+	case .Down:
+		{
+			flipConstant = 1
+			if character_state.action == .Standing {
+				yPos = 0
+				if pose == 0 || pose == 1 do xPos = CHARACTER_TEXTURE_SIZE
+				else do xPos = CHARACTER_TEXTURE_SIZE * 2
+			} else if character_state.action == .Walking {
+				yPos = CHARACTER_TEXTURE_SIZE * 2
+				switch pose {
+				case 0:
+					xPos = 0
+				case 1:
+					xPos = CHARACTER_TEXTURE_SIZE
+				case 2:
+					xPos = CHARACTER_TEXTURE_SIZE * 2
+				case 3:
+					xPos = CHARACTER_TEXTURE_SIZE * 3
+				}
+			}
+
+		}
+
+	case .Left:
+		{
+			flipConstant = 1
+			if character_state.action == .Standing {
+				yPos = 0
+				switch pose {
+				case 0:
+					xPos = CHARACTER_TEXTURE_SIZE
+				case 1:
+					xPos = CHARACTER_TEXTURE_SIZE * 2
+				case 2:
+					xPos = CHARACTER_TEXTURE_SIZE * 3
+				case 3:
+					xPos = CHARACTER_TEXTURE_SIZE * 4
+
+				}
+			} else if character_state.action == .Walking {
+				yPos = CHARACTER_TEXTURE_SIZE
+				switch pose {
+				case 0:
+					xPos = 0
+				case 1:
+					xPos = CHARACTER_TEXTURE_SIZE
+				case 2:
+					xPos = CHARACTER_TEXTURE_SIZE * 2
+				case 3:
+					xPos = CHARACTER_TEXTURE_SIZE * 3
+				}
+			}
+		}
+
+	case .Right:
+		{
+			flipConstant = -1
+			if character_state.action == .Standing {
+				yPos = 0
+				if pose == 0 || pose == 1 do xPos = CHARACTER_TEXTURE_SIZE
+				else do xPos = CHARACTER_TEXTURE_SIZE * 2
+			} else if character_state.action == .Walking {
+				yPos = CHARACTER_TEXTURE_SIZE * 2
+				switch pose {
+				case 0:
+					xPos = 0
+				case 1:
+					xPos = CHARACTER_TEXTURE_SIZE
+				case 2:
+					xPos = CHARACTER_TEXTURE_SIZE * 2
+				case 3:
+					xPos = CHARACTER_TEXTURE_SIZE * 3
+				}
+			}
+		}
+	}
+
+	return(
+		rl.Rectangle {
+			xPos,
+			yPos,
+			f32(flipConstant) * CHARACTER_TEXTURE_SIZE,
+			CHARACTER_TEXTURE_SIZE,
+		} \
+	)
 }
 
-// A hash-map of character direction to texture file name
-characterDirectionToTextureName: map[Direction]string = {
-	Direction.Up    = "character_back",
-	Direction.Down  = "character_front",
-	Direction.Left  = "character_back",
-	Direction.Right = "character_front",
+enemy_texture_source_rect :: proc(character_state: ^CharacterState) -> rl.Rectangle {
+	xPos := f32(character_state.pose % 6) * ENEMY_TEXTURE_SIZE
+	yPos := f32(character_state.pose / 6) * ENEMY_TEXTURE_SIZE
+	return rl.Rectangle{xPos, yPos, ENEMY_TEXTURE_SIZE, ENEMY_TEXTURE_SIZE}
 }
