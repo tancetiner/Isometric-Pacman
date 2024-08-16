@@ -1,5 +1,6 @@
 package main
 
+import "core:c/libc"
 import "core:encoding/json"
 import "core:fmt"
 import "core:math"
@@ -866,22 +867,24 @@ draw_main_menu :: proc(game_state: ^GameState) {
 	}
 
 	// Draw high scores
-	text := strings.concatenate(
-		 {
-			"High Scores\n\n\n",
-			"Easy: ",
-			int_to_string(game_state.high_scores[GameDifficulty.Easy]),
-			"\n\n",
-			"Medium: ",
-			int_to_string(game_state.high_scores[GameDifficulty.Medium]),
-			"\n\n",
-			"Hard: ",
-			int_to_string(game_state.high_scores[GameDifficulty.Hard]),
-		},
-	)
-	textC: cstring = strings.unsafe_string_to_cstring(text)
-	textWidth = rl.MeasureText(textC, 20)
-	rl.DrawText(textC, WINDOW_WIDTH - textWidth - 10, WINDOW_HEIGHT - 140, 20, rl.BLACK)
+	if len(game_state.high_scores) != 0 {
+		text := strings.concatenate(
+			 {
+				"High Scores\n\n\n",
+				"Easy: ",
+				int_to_string(game_state.high_scores[GameDifficulty.Easy]),
+				"\n\n",
+				"Medium: ",
+				int_to_string(game_state.high_scores[GameDifficulty.Medium]),
+				"\n\n",
+				"Hard: ",
+				int_to_string(game_state.high_scores[GameDifficulty.Hard]),
+			},
+		)
+		textC: cstring = strings.unsafe_string_to_cstring(text)
+		textWidth = rl.MeasureText(textC, 20)
+		rl.DrawText(textC, WINDOW_WIDTH - textWidth - 10, WINDOW_HEIGHT - 140, 20, rl.BLACK)
+	}
 }
 
 draw_game_over :: proc(game_state: ^GameState) {
@@ -912,7 +915,8 @@ draw_game_over :: proc(game_state: ^GameState) {
 	rl.DrawText(textC, (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 2 + 90, 30, rl.BLACK)
 
 	// Draw NEW RECORD if it is a new record
-	if game_state.score > game_state.high_scores[game_state.difficulty] {
+	if len(game_state.high_scores) != 0 &&
+	   game_state.score > game_state.high_scores[game_state.difficulty] {
 		textWidth = rl.MeasureText("NEW HIGH SCORE", 50)
 		rl.DrawText(
 			"NEW HIGH SCORE",
@@ -976,14 +980,23 @@ gameDifficultyToNumberOfEnemies := map[GameDifficulty]int {
 }
 
 read_high_scores :: proc() -> map[GameDifficulty]int {
+	emptyMap := map[GameDifficulty]int{}
 
-	emptyMap := map[GameDifficulty]int {
-		GameDifficulty.Easy   = -1,
-		GameDifficulty.Medium = -1,
-		GameDifficulty.Hard   = -1,
+	if !os.exists("./assets/high_scores.json") {
+		fd, err := os.open("./assets/high_scores.json", os.O_CREATE | os.O_WRONLY)
+
+		if err != nil {
+			fmt.println("Error creating high scores file")
+			return emptyMap
+		}
+		defer os.close(fd)
+
+		if !write_string_to_json(fd, NEW_HIGH_SCORES_TEXT) do return emptyMap
+
+		libc.system("chmod 644 ./assets/high_scores.json")
 	}
 
-	file, err := os.open("assets/high_scores.json")
+	file, err := os.open("assets/high_scores.json", os.O_RDONLY)
 	if err != nil {
 		return emptyMap
 	}
@@ -1045,17 +1058,24 @@ write_high_scores :: proc(high_scores: map[GameDifficulty]int) {
 
 	json_string := strings.to_string(stringBuilder)
 
-	fmt.println(json_string)
-
 	file, fileOpenErr := os.open("assets/high_scores.json")
+
 	if fileOpenErr != nil {
 		return
 	}
 	defer os.close(file)
 
-	data := transmute([]u8)json_string
+	write_string_to_json(file, json_string)
+}
 
-	os.write(file, data)
+write_string_to_json :: proc(fd: os.Handle, data: string) -> bool {
+	_, err := os.write(fd, transmute([]u8)data)
+	if err != nil {
+		fmt.println("Error writing to high scores file")
+		return false
+	}
+
+	return true
 }
 
 check_high_score :: proc(game_state: ^GameState) {
