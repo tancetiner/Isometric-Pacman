@@ -4,7 +4,7 @@ import "core:math"
 import "core:strings"
 import rl "vendor:raylib"
 
-draw_tile_editor_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.Texture2D) {
+draw_edit_map_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.Texture2D) {
 	for col in 0 ..< GRID_WIDTH {
 		for row in 0 ..< GRID_HEIGHT {
 			position := tile_position_to_screen_position({col, row})
@@ -47,20 +47,26 @@ draw_tile_editor_mode :: proc(game_state: ^GameState, texture_map: ^map[string]r
 
 draw_main_menu :: proc(game_state: ^GameState) {
 	textWidth := rl.MeasureText("ISOMETRIC PACMAN", 50)
-	rl.DrawText("ISOMETRIC PACMAN", (WINDOW_WIDTH - textWidth) / 2, WINDOW_HEIGHT / 4, 50, rl.RED)
+	rl.DrawText(
+		"ISOMETRIC PACMAN",
+		(WINDOW_WIDTH - textWidth) / 2,
+		WINDOW_HEIGHT * 2 / 12,
+		50,
+		rl.RED,
+	)
 
-	rectangleColors := [4]rl.Color{rl.BLACK, rl.BLACK, rl.BLACK, rl.BLACK}
+	rectangleColors := [5]rl.Color{rl.BLACK, rl.BLACK, rl.BLACK, rl.BLACK, rl.BLACK}
 	rectangleColors[game_state.menu_index] = rl.RED
 
 	rectangleWidth: i32 = WINDOW_WIDTH / 4
 	rectangleHeight: i32 = WINDOW_HEIGHT / 12
 
 	rectanglePositionX: i32 = i32(WINDOW_WIDTH / 2)
-	rectanglePositionY: i32 = i32(WINDOW_HEIGHT * 3 / 10)
+	rectanglePositionY: i32 = i32(WINDOW_HEIGHT * 5 / 24)
 
-	options := [4]string{"Play Game", "Tile Editor", "Change Difficulty", "Exit"}
+	options := [5]string{"Play Game", "Tile Editor", "Change Difficulty", "How to Play", "Exit"}
 
-	for i in 0 ..< 4 {
+	for i in 0 ..< len(options) {
 		rectanglePositionY += rectangleHeight * 3 / 2
 
 		rl.DrawRectangle(
@@ -94,7 +100,7 @@ draw_main_menu :: proc(game_state: ^GameState) {
 	// Draw high scores
 	if len(game_state.high_scores) != 0 {
 		text := strings.concatenate(
-			 {
+			{
 				"High Scores\n\n\n",
 				"Easy: ",
 				int_to_string(game_state.high_scores[GameDifficulty.Easy]),
@@ -263,60 +269,139 @@ draw_normal_mode :: proc(
 	// Pause Menu
 	if game_state.is_paused {
 		horizontalOffset: i32 = -WINDOW_WIDTH / 2
-		rectangleColors := [3]rl.Color{rl.BLACK, rl.BLACK, rl.BLACK}
+		rectangleColors := [4]rl.Color{rl.RAYWHITE, rl.RAYWHITE, rl.RAYWHITE, rl.RAYWHITE}
 		rectangleColors[game_state.menu_index] = rl.RED
+
+		rectanglePosY: i32 = WINDOW_HEIGHT / 4
+		rectangleHeight: i32 = WINDOW_HEIGHT / 2
+		titlePadding: i32 = rectangleHeight / 7
+		optionPadding: i32 = titlePadding / 2
+		titleFont: i32 = titlePadding
+		optionFont: i32 = optionPadding
 
 		// Draw the menu
 		rl.DrawRectangle(
 			horizontalOffset + WINDOW_WIDTH / 4,
-			WINDOW_HEIGHT / 4,
+			rectanglePosY,
 			WINDOW_WIDTH / 2,
-			WINDOW_HEIGHT / 2,
+			rectangleHeight,
 			rl.Fade(rl.BLACK, 0.8),
 		)
+
 		rl.DrawRectangleLines(
 			horizontalOffset + WINDOW_WIDTH / 4,
-			WINDOW_HEIGHT / 4,
+			rectanglePosY,
 			WINDOW_WIDTH / 2,
-			WINDOW_HEIGHT / 2,
+			rectangleHeight,
 			rl.BLACK,
 		)
 
-		textWidth = rl.MeasureText("PAUSED", 40)
+		textWidth = rl.MeasureText("PAUSED", titleFont)
 		rl.DrawText(
 			"PAUSED",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			WINDOW_HEIGHT / 2 - 80,
-			40,
+			rectanglePosY + titlePadding,
+			titleFont,
 			rl.RED,
 		)
 
+		optionsStartPosY := rectanglePosY + titlePadding * 3
+
 		// Draw the options
-		textWidth = rl.MeasureText("Resume", 20)
+		textWidth = rl.MeasureText("Resume", optionFont)
 		rl.DrawText(
 			"Resume",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			WINDOW_HEIGHT / 2 - 30,
-			20,
+			optionsStartPosY,
+			optionFont,
 			rectangleColors[0],
 		)
 
-		textWidth = rl.MeasureText("Restart", 20)
+		textWidth = rl.MeasureText("Restart", optionFont)
 		rl.DrawText(
 			"Restart",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			WINDOW_HEIGHT / 2,
-			20,
+			optionsStartPosY + optionPadding * 2,
+			optionFont,
 			rectangleColors[1],
 		)
 
-		textWidth = rl.MeasureText("To Main Menu", 20)
+		textWidth = rl.MeasureText("How to Play", optionFont)
+		rl.DrawText(
+			"How to Play",
+			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
+			optionsStartPosY + optionPadding * 4,
+			optionFont,
+			rectangleColors[2],
+		)
+
+		textWidth = rl.MeasureText("To Main Menu", optionFont)
 		rl.DrawText(
 			"To Main Menu",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			WINDOW_HEIGHT / 2 + 30,
-			20,
-			rectangleColors[2],
+			optionsStartPosY + optionPadding * 6,
+			optionFont,
+			rectangleColors[3],
+		)
+	}
+}
+
+draw_show_help_mode :: proc(game_state: ^GameState) {
+	rl.DrawRectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, rl.Fade(rl.BLACK, 0.8))
+
+	titlePadding: i32 = WINDOW_HEIGHT / 14
+	instructionPadding: i32 = titlePadding / 2
+
+	titleFont: i32 = titlePadding
+	instructionFont: i32 = instructionPadding
+
+	textC: cstring = "How to Play"
+	textWidth: i32 = rl.MeasureText(textC, titleFont)
+	rl.DrawText("How to Play", (WINDOW_WIDTH - textWidth) / 2, titlePadding, titleFont, rl.RED)
+
+	instructions: [4]cstring = {
+		"- Use the arrow keys to move the character",
+		"- Collect the items (red circles) to increase your score",
+		"- Avoid the enemies to survive",
+		"- Press escape (ESC) to pause the game",
+	}
+
+	for instruction, idx in instructions {
+		textWidth = rl.MeasureText(instruction, instructionFont)
+		rl.DrawText(
+			instruction,
+			(WINDOW_WIDTH - textWidth) / 2,
+			titlePadding * 3 + instructionPadding * 2 * i32(idx),
+			instructionFont,
+			rl.WHITE,
+		)
+	}
+
+	textC = "Scoring System"
+	textWidth = rl.MeasureText(textC, titleFont)
+	rl.DrawText(
+		textC,
+		(WINDOW_WIDTH - textWidth) / 2,
+		titlePadding * 4 + instructionPadding * 7,
+		titleFont,
+		rl.RED,
+	)
+
+	instructions = [4]cstring {
+		"- Each second you get 1 point times the score coefficient",
+		"- Each collected item gives you 10 points times the score coefficient",
+		"- The score coefficient increases every 15 seconds",
+		"- The score coefficient is shown in the top right corner (like x3)",
+	}
+
+	for instruction, idx in instructions {
+		textWidth = rl.MeasureText(instruction, instructionFont)
+		rl.DrawText(
+			instruction,
+			(WINDOW_WIDTH - textWidth) / 2,
+			titlePadding * 6 + instructionPadding * 7 + instructionPadding * 2 * i32(idx),
+			instructionFont,
+			rl.WHITE,
 		)
 	}
 }

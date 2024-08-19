@@ -7,7 +7,7 @@ handle_input_main_menu :: proc(game_state: ^GameState, character_state: ^Charact
 	using rl.KeyboardKey
 	idx := game_state.menu_index
 
-	if rl.IsKeyPressed(.DOWN) || rl.IsKeyPressed(.S) do if idx < 3 do idx += 1
+	if rl.IsKeyPressed(.DOWN) || rl.IsKeyPressed(.S) do if idx < 4 do idx += 1
 	if rl.IsKeyPressed(.UP) || rl.IsKeyPressed(.W) do if idx > 0 do idx -= 1
 	if rl.IsKeyPressed(.KP_ENTER) || rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.SPACE) {
 		switch idx {
@@ -15,10 +15,13 @@ handle_input_main_menu :: proc(game_state: ^GameState, character_state: ^Charact
 			reset_game(game_state, character_state)
 			game_state.mode = GameMode.PlayGame
 		case 1:
-			game_state.mode = GameMode.TileEditor
+			game_state.mode = GameMode.EditMap
 		case 2:
 			change_difficulty(game_state)
 		case 3:
+			game_state.last_mode = GameMode.MainMenu
+			game_state.mode = GameMode.ShowHelp
+		case 4:
 			os.exit(0)
 		}
 	}
@@ -26,18 +29,17 @@ handle_input_main_menu :: proc(game_state: ^GameState, character_state: ^Charact
 	game_state.menu_index = idx
 }
 
-handle_input :: proc(
+handle_input_play_game :: proc(
 	game_state: ^GameState,
 	character_state: ^CharacterState,
 	camera: ^rl.Camera2D,
 ) {
 	using rl.KeyboardKey
 
-
 	// Pause menu logic
 	if game_state.is_paused {
 		idx := game_state.menu_index
-		if rl.IsKeyPressed(.DOWN) || rl.IsKeyPressed(.S) && idx < 2 do idx += 1
+		if rl.IsKeyPressed(.DOWN) || rl.IsKeyPressed(.S) && idx < 3 do idx += 1
 		if rl.IsKeyPressed(.UP) || rl.IsKeyPressed(.W) && idx > 0 do idx -= 1
 		if rl.IsKeyPressed(.KP_ENTER) || rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.SPACE) {
 			switch idx {
@@ -49,13 +51,17 @@ handle_input :: proc(
 				reset_game(game_state, character_state)
 				game_state.is_paused = false
 			case 2:
+				// Show help
+				game_state.last_mode = GameMode.PlayGame
+				game_state.mode = GameMode.ShowHelp
+			case 3:
 				// To the main menu
 				game_state.menu_index = 0
 				game_state.mode = GameMode.MainMenu
 			}
 		}
 
-		if idx >= 0 && idx <= 2 do game_state.menu_index = idx
+		if idx >= 0 && idx <= 3 do game_state.menu_index = idx
 		return
 	}
 
@@ -87,7 +93,7 @@ handle_input :: proc(
 			character_on_the_move = true
 		}
 	} else if rl.IsKeyPressed(.M) {
-		game_state.mode = GameMode.TileEditor
+		game_state.mode = GameMode.EditMap
 	}
 
 	if character_on_the_move do move_character(character_state, game_state)
@@ -117,7 +123,7 @@ handle_input :: proc(
 	}
 }
 
-handle_input_tile_editor :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
+handle_input_edit_map :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
 	using rl.KeyboardKey
 
 	// Go back to main menu
@@ -145,4 +151,10 @@ handle_input_tile_editor :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
 
 	// Change tile
 	if rl.IsKeyPressed(.SPACE) do update_tile_and_neighbors(game_state, game_state.tile_edit_position)
+}
+
+handle_input_show_help :: proc(game_state: ^GameState) {
+	using rl.KeyboardKey
+
+	if rl.IsKeyPressed(.ESCAPE) || rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.SPACE) || rl.IsKeyPressed(.KP_ENTER) do game_state.mode = game_state.last_mode
 }

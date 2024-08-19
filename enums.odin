@@ -17,7 +17,8 @@ CharacterAction :: enum {
 GameMode :: enum {
 	MainMenu,
 	PlayGame,
-	TileEditor,
+	EditMap,
+	ShowHelp,
 	GameOver,
 }
 

@@ -20,6 +20,7 @@ GameState :: struct {
 	is_paused:            bool,
 	menu_index:           int,
 	enemies:              [dynamic]CharacterState,
+	last_mode:            GameMode,
 }
 
 CharacterState :: struct {

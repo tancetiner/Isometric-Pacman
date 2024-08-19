@@ -34,6 +34,7 @@ main :: proc() {
 		collected_count      = 0,
 		collectible_position = {},
 		high_scores          = read_high_scores(),
+		last_mode            = GameMode.MainMenu,
 	}
 
 	// Initialize Enemies
@@ -59,7 +60,7 @@ main :: proc() {
 	camera := rl.Camera2D{rl.Vector2{WINDOW_WIDTH / 2, 0.0}, rl.Vector2{0.0, 0.0}, 0.0, 1.0}
 
 	// Main game loop
-	gameloop: for true {
+	for true {
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.RAYWHITE)
 
@@ -78,23 +79,30 @@ main :: proc() {
 			update_state(&game_state, &character_state)
 
 			// Handling Input
-			handle_input(&game_state, &character_state, &camera)
+			handle_input_play_game(&game_state, &character_state, &camera)
 
 			// Draw Game
 			draw_normal_mode(&game_state, &character_state, &textureMap)
 
 			rl.EndMode2D()
 
-		case GameMode.TileEditor:
+		case GameMode.EditMap:
 			rl.BeginMode2D(camera)
 
 			// Handling Input
-			handle_input_tile_editor(&game_state, &camera)
+			handle_input_edit_map(&game_state, &camera)
 
-			// Draw Tile Editor
-			draw_tile_editor_mode(&game_state, &textureMap)
+			// Draw Edit Map Mode
+			draw_edit_map_mode(&game_state, &textureMap)
 
 			rl.EndMode2D()
+
+		case GameMode.ShowHelp:
+			// Handling Input for Help
+			handle_input_show_help(&game_state)
+
+			// Draw Help Screen
+			draw_show_help_mode(&game_state)
 
 		case GameMode.GameOver:
 			// Update counter
