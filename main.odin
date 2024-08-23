@@ -89,7 +89,7 @@ main :: proc() {
 			update_state(&game_state, &character_state)
 
 			// Handling Input
-			handle_input_play_game(&game_state, &character_state, &camera)
+			handle_input_play_game(&game_state, &character_state)
 
 			// Draw Game
 			draw_normal_mode(&game_state, &character_state, &textureMap)
@@ -100,7 +100,7 @@ main :: proc() {
 			rl.BeginMode2D(camera)
 
 			// Handling Input
-			handle_input_edit_map(&game_state, &camera)
+			handle_input_edit_map(&game_state)
 
 			// Draw Edit Map Mode
 			draw_edit_map_mode(&game_state, &textureMap)

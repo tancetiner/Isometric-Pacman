@@ -29,11 +29,7 @@ handle_input_main_menu :: proc(game_state: ^GameState, character_state: ^Charact
 	game_state.menu_index = idx
 }
 
-handle_input_play_game :: proc(
-	game_state: ^GameState,
-	character_state: ^CharacterState,
-	camera: ^rl.Camera2D,
-) {
+handle_input_play_game :: proc(game_state: ^GameState, character_state: ^CharacterState) {
 	using rl.KeyboardKey
 
 	// Pause menu logic
@@ -98,24 +94,6 @@ handle_input_play_game :: proc(
 
 	if character_on_the_move do move_character(character_state, game_state)
 
-	// Map scrolling
-	if rl.IsKeyDown(.W) {
-		camera.target.y -= 10
-	} else if rl.IsKeyDown(.S) {
-		camera.target.y += 10
-	} else if rl.IsKeyDown(.A) {
-		camera.target.x -= 10
-	} else if rl.IsKeyDown(.D) {
-		camera.target.x += 10
-	}
-
-	// Zoom control
-	if rl.IsKeyDown(.Q) {
-		camera.zoom += 0.02
-	} else if rl.IsKeyDown(.E) {
-		camera.zoom -= 0.02
-	}
-
 	// Pause the game
 	if rl.IsKeyPressed(.ESCAPE) {
 		game_state.menu_index = 0
@@ -123,7 +101,7 @@ handle_input_play_game :: proc(
 	}
 }
 
-handle_input_edit_map :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
+handle_input_edit_map :: proc(game_state: ^GameState) {
 	using rl.KeyboardKey
 
 	// Pause menu logic
@@ -160,16 +138,6 @@ handle_input_edit_map :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
 		game_state.menu_index = 0
 		game_state.is_paused = true
 	}
-
-	// Map scrolling
-	if rl.IsKeyDown(.W) do camera.target.y -= 10
-	else if rl.IsKeyDown(.S) do camera.target.y += 10
-	else if rl.IsKeyDown(.A) do camera.target.x -= 10
-	else if rl.IsKeyDown(.D) do camera.target.x += 10
-
-	// Zoom control
-	if rl.IsKeyDown(.Q) do camera.zoom += 0.02
-	else if rl.IsKeyDown(.E) do camera.zoom -= 0.02
 
 	// Change tile edit position
 	xPos, yPos := game_state.tile_edit_position.x, game_state.tile_edit_position.y
