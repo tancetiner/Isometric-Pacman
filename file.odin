@@ -7,17 +7,12 @@ import "core:os"
 import "core:strings"
 import "core:unicode/utf8"
 
-read_map :: proc(
-	filepath: string,
-) -> (
-	[GRID_HEIGHT][GRID_WIDTH]rune,
-	[GRID_HEIGHT][GRID_WIDTH]bool,
-) {
+read_map :: proc(game_state: ^GameState, filepath: string) -> bool {
 	data, ok := os.read_entire_file(filepath, context.allocator)
 	if !ok {
 		// could not read file
 		fmt.println("Could not read file")
-		return [GRID_HEIGHT][GRID_WIDTH]rune{}, [GRID_HEIGHT][GRID_WIDTH]bool{}
+		return false
 	}
 	defer delete(data)
 
@@ -39,7 +34,11 @@ read_map :: proc(
 		idx += 1
 	}
 
-	return gameMap, gameMapBoolean
+	// Assign the game map to the game state
+	game_state.game_map = gameMap
+	game_state.game_map_boolean = gameMapBoolean
+
+	return true
 }
 
 
@@ -101,13 +100,11 @@ read_high_scores :: proc() -> map[GameDifficulty]int {
 		return emptyMap
 	}
 
-	return(
-		map[GameDifficulty]int {
-			GameDifficulty.Easy = int(json_object["easy"].(json.Float)),
-			GameDifficulty.Medium = int(json_object["medium"].(json.Float)),
-			GameDifficulty.Hard = int(json_object["hard"].(json.Float)),
-		} \
-	)
+	return (map[GameDifficulty]int {
+				GameDifficulty.Easy = int(json_object["easy"].(json.Float)),
+				GameDifficulty.Medium = int(json_object["medium"].(json.Float)),
+				GameDifficulty.Hard = int(json_object["hard"].(json.Float)),
+			})
 }
 
 write_high_scores :: proc(high_scores: map[GameDifficulty]int) {

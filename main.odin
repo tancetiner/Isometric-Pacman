@@ -1,5 +1,6 @@
 package main
 
+import "core:fmt"
 import rl "vendor:raylib"
 
 main :: proc() {
@@ -17,12 +18,10 @@ main :: proc() {
 	}
 
 	// Initialize Game State
-	gameMap, gameMapBoolean := read_map("./assets/map.txt")
-
 	game_state: GameState = GameState {
 		mode                 = GameMode.MainMenu,
-		game_map             = gameMap,
-		game_map_boolean     = gameMapBoolean,
+		game_map             = {},
+		game_map_boolean     = {},
 		tile_edit_position   = {0, 0},
 		enemies              = {},
 		menu_index           = 0,
@@ -35,6 +34,12 @@ main :: proc() {
 		collectible_position = {},
 		high_scores          = read_high_scores(),
 		last_mode            = GameMode.MainMenu,
+	}
+
+	// Initialize Game Map
+	if !read_map(&game_state, "./assets/map.txt") {
+		fmt.println("Could not read map! Aborting...")
+		return
 	}
 
 	// Initialize Enemies
@@ -57,7 +62,12 @@ main :: proc() {
 	place_collectible(&game_state, &character_state)
 
 	// Initialize Camera
-	camera := rl.Camera2D{rl.Vector2{WINDOW_WIDTH / 2, 0.0}, rl.Vector2{0.0, 0.0}, 0.0, 1.0}
+	camera := rl.Camera2D {
+		rl.Vector2{WINDOW_WIDTH / 2, -WINDOW_HEIGHT / 2},
+		rl.Vector2{0.0, 0.0},
+		0.0,
+		1.0,
+	}
 
 	// Main game loop
 	for true {
