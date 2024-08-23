@@ -34,9 +34,29 @@ To play or develop Isometric Pacman, follow these steps:
    cd isometric-pacman
    ```
 4. Build and run the game:
+
    ```bash
    odin run .
    ```
+
+## Screenshots
+
+Here are some screenshots showcasing various aspects of the game:
+
+1. **Gameplay:**
+   ![Gameplay](./assets/gameplay-screenshots/gameplay.png)
+
+2. **Gameplay Paused:**
+   ![Gameplay Paused](./assets/gameplay-screenshots/paused.png)
+
+3. **Main Menu:**
+   ![Main Menu](./assets/gameplay-screenshots/main-menu.png)
+
+4. **Tile Editor:**
+   ![Tile Editor](./assets/gameplay-screenshots/tile-editor.png)
+
+5. **How to Play:**
+   ![How to Play](./assets/gameplay-screenshots/how-to-play.png)
 
 ## Acknowledgements
 
