@@ -34,6 +34,8 @@ main :: proc() {
 		collectible_position = {},
 		high_scores          = read_high_scores(),
 		last_mode            = GameMode.MainMenu,
+		is_paused            = false,
+		isOnScreen           = {},
 	}
 
 	// Initialize Game Map
@@ -44,6 +46,9 @@ main :: proc() {
 
 	// Initialize Enemies
 	initialize_enemies(&game_state)
+
+	// Initialize isOnScreen array
+	initializeIsOnScreen(&game_state)
 
 	// Initialize Character State
 	character_state: CharacterState = CharacterState {
@@ -63,7 +68,7 @@ main :: proc() {
 
 	// Initialize Camera
 	camera := rl.Camera2D {
-		rl.Vector2{WINDOW_WIDTH / 2, -WINDOW_HEIGHT / 2},
+		rl.Vector2{CAMERA_HORIZONTAL_OFFSET, CAMERA_VERTICAL_OFFSET},
 		rl.Vector2{0.0, 0.0},
 		0.0,
 		1.0,

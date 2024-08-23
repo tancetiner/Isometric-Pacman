@@ -317,3 +317,15 @@ check_high_score :: proc(game_state: ^GameState) {
 		write_high_scores(game_state.high_scores)
 	}
 }
+
+initializeIsOnScreen :: proc(game_state: ^GameState) {
+	game_state.isOnScreen = [GRID_HEIGHT][GRID_WIDTH]bool{}
+	for row in 0 ..< GRID_HEIGHT {
+		for col in 0 ..< GRID_WIDTH {
+			position := tile_position_to_screen_position({col, row})
+			x, y := position.x + CAMERA_HORIZONTAL_OFFSET, position.y + CAMERA_VERTICAL_OFFSET
+			game_state.isOnScreen[row][col] =
+				x >= 0 && x <= WINDOW_WIDTH && y >= 0 && y <= WINDOW_HEIGHT
+		}
+	}
+}

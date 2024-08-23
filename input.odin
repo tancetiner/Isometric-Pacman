@@ -15,6 +15,7 @@ handle_input_main_menu :: proc(game_state: ^GameState, character_state: ^Charact
 			reset_game(game_state, character_state)
 			game_state.mode = GameMode.PlayGame
 		case 1:
+			game_state.tile_edit_position = {GRID_WIDTH / 2, GRID_HEIGHT / 2}
 			game_state.mode = GameMode.EditMap
 		case 2:
 			change_difficulty(game_state)
@@ -53,6 +54,7 @@ handle_input_play_game :: proc(game_state: ^GameState, character_state: ^Charact
 			case 3:
 				// To the main menu
 				game_state.menu_index = 0
+				game_state.is_paused = false
 				game_state.mode = GameMode.MainMenu
 			}
 		}
@@ -141,10 +143,10 @@ handle_input_edit_map :: proc(game_state: ^GameState) {
 
 	// Change tile edit position
 	xPos, yPos := game_state.tile_edit_position.x, game_state.tile_edit_position.y
-	if rl.IsKeyPressed(.UP) && yPos > 0 do game_state.tile_edit_position.y -= 1
-	else if rl.IsKeyPressed(.DOWN) && yPos < GRID_HEIGHT - 1 do game_state.tile_edit_position.y += 1
-	else if rl.IsKeyPressed(.LEFT) && xPos > 0 do game_state.tile_edit_position.x -= 1
-	else if rl.IsKeyPressed(.RIGHT) && xPos < GRID_WIDTH - 1 do game_state.tile_edit_position.x += 1
+	if rl.IsKeyPressed(.UP) && yPos > 0 && game_state.isOnScreen[yPos - 1][xPos] do game_state.tile_edit_position.y -= 1
+	else if rl.IsKeyPressed(.DOWN) && yPos < GRID_HEIGHT - 1 && game_state.isOnScreen[yPos + 1][xPos] do game_state.tile_edit_position.y += 1
+	else if rl.IsKeyPressed(.LEFT) && xPos > 0 && game_state.isOnScreen[yPos][xPos - 1] do game_state.tile_edit_position.x -= 1
+	else if rl.IsKeyPressed(.RIGHT) && xPos < GRID_WIDTH - 1 && game_state.isOnScreen[yPos][xPos + 1] do game_state.tile_edit_position.x += 1
 
 	// Change tile
 	if rl.IsKeyPressed(.SPACE) do update_tile_and_neighbors(game_state, game_state.tile_edit_position)

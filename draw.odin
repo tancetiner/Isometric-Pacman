@@ -46,7 +46,8 @@ draw_edit_map_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.T
 
 	// Pause Menu
 	if game_state.is_paused {
-		horizontalOffset: i32 = -WINDOW_WIDTH / 2
+		horizontalOffset: i32 = -CAMERA_HORIZONTAL_OFFSET
+		verticalOffset: i32 = -CAMERA_VERTICAL_OFFSET
 		rectangleColors := [3]rl.Color{rl.RAYWHITE, rl.RAYWHITE, rl.RAYWHITE}
 		rectangleColors[game_state.menu_index] = rl.RED
 
@@ -60,7 +61,7 @@ draw_edit_map_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.T
 		// Draw the menu
 		rl.DrawRectangle(
 			horizontalOffset + WINDOW_WIDTH / 4,
-			rectanglePosY,
+			verticalOffset + rectanglePosY,
 			WINDOW_WIDTH / 2,
 			rectangleHeight,
 			rl.Fade(rl.BLACK, 0.8),
@@ -68,7 +69,7 @@ draw_edit_map_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.T
 
 		rl.DrawRectangleLines(
 			horizontalOffset + WINDOW_WIDTH / 4,
-			rectanglePosY,
+			verticalOffset + rectanglePosY,
 			WINDOW_WIDTH / 2,
 			rectangleHeight,
 			rl.BLACK,
@@ -78,7 +79,7 @@ draw_edit_map_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.T
 		rl.DrawText(
 			"TILE EDITOR",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			rectanglePosY + titlePadding,
+			verticalOffset + rectanglePosY + titlePadding,
 			titleFont,
 			rl.RED,
 		)
@@ -90,7 +91,7 @@ draw_edit_map_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.T
 		rl.DrawText(
 			"Resume",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			optionsStartPosY,
+			verticalOffset + optionsStartPosY,
 			optionFont,
 			rectangleColors[0],
 		)
@@ -99,7 +100,7 @@ draw_edit_map_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.T
 		rl.DrawText(
 			"Save and Exit",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			optionsStartPosY + optionPadding * 2,
+			verticalOffset + optionsStartPosY + optionPadding * 2,
 			optionFont,
 			rectangleColors[1],
 		)
@@ -108,7 +109,7 @@ draw_edit_map_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.T
 		rl.DrawText(
 			"Discard and Exit",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			optionsStartPosY + optionPadding * 4,
+			verticalOffset + optionsStartPosY + optionPadding * 4,
 			optionFont,
 			rectangleColors[2],
 		)
@@ -338,7 +339,8 @@ draw_normal_mode :: proc(
 
 	// Pause Menu
 	if game_state.is_paused {
-		horizontalOffset: i32 = -WINDOW_WIDTH / 2
+		horizontalOffset: i32 = -CAMERA_HORIZONTAL_OFFSET
+		verticalOffset: i32 = -CAMERA_VERTICAL_OFFSET
 		rectangleColors := [4]rl.Color{rl.RAYWHITE, rl.RAYWHITE, rl.RAYWHITE, rl.RAYWHITE}
 		rectangleColors[game_state.menu_index] = rl.RED
 
@@ -352,7 +354,7 @@ draw_normal_mode :: proc(
 		// Draw the menu
 		rl.DrawRectangle(
 			horizontalOffset + WINDOW_WIDTH / 4,
-			rectanglePosY,
+			verticalOffset + rectanglePosY,
 			WINDOW_WIDTH / 2,
 			rectangleHeight,
 			rl.Fade(rl.BLACK, 0.8),
@@ -360,7 +362,7 @@ draw_normal_mode :: proc(
 
 		rl.DrawRectangleLines(
 			horizontalOffset + WINDOW_WIDTH / 4,
-			rectanglePosY,
+			verticalOffset + rectanglePosY,
 			WINDOW_WIDTH / 2,
 			rectangleHeight,
 			rl.BLACK,
@@ -370,7 +372,7 @@ draw_normal_mode :: proc(
 		rl.DrawText(
 			"PAUSED",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			rectanglePosY + titlePadding,
+			verticalOffset + rectanglePosY + titlePadding,
 			titleFont,
 			rl.RED,
 		)
@@ -382,7 +384,7 @@ draw_normal_mode :: proc(
 		rl.DrawText(
 			"Resume",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			optionsStartPosY,
+			verticalOffset + optionsStartPosY,
 			optionFont,
 			rectangleColors[0],
 		)
@@ -391,7 +393,7 @@ draw_normal_mode :: proc(
 		rl.DrawText(
 			"Restart",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			optionsStartPosY + optionPadding * 2,
+			verticalOffset + optionsStartPosY + optionPadding * 2,
 			optionFont,
 			rectangleColors[1],
 		)
@@ -400,7 +402,7 @@ draw_normal_mode :: proc(
 		rl.DrawText(
 			"How to Play",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			optionsStartPosY + optionPadding * 4,
+			verticalOffset + optionsStartPosY + optionPadding * 4,
 			optionFont,
 			rectangleColors[2],
 		)
@@ -409,7 +411,7 @@ draw_normal_mode :: proc(
 		rl.DrawText(
 			"To Main Menu",
 			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
-			optionsStartPosY + optionPadding * 6,
+			verticalOffset + optionsStartPosY + optionPadding * 6,
 			optionFont,
 			rectangleColors[3],
 		)

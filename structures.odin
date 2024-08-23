@@ -21,6 +21,7 @@ GameState :: struct {
 	menu_index:           int,
 	enemies:              [dynamic]CharacterState,
 	last_mode:            GameMode,
+	isOnScreen:           [GRID_HEIGHT][GRID_WIDTH]bool,
 }
 
 CharacterState :: struct {
