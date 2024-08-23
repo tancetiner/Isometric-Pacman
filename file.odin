@@ -8,6 +8,27 @@ import "core:strings"
 import "core:unicode/utf8"
 
 read_map :: proc(game_state: ^GameState, filepath: string) -> bool {
+
+	if !os.exists("./assets/map.txt") {
+		fd, err := os.open("./assets/map.txt", os.O_CREATE | os.O_WRONLY)
+
+		if err != nil {
+			fmt.println("Error creating maps file")
+			return false
+		}
+		defer os.close(fd)
+
+		libc.system("chmod 644 ./assets/map.txt")
+
+		temp_data: string = NEW_MAP_TEXT
+
+		data := transmute([]u8)temp_data
+		if !os.write_entire_file(filepath, data) {
+			fmt.println("Could not write to file!")
+			return false
+		}
+	}
+
 	data, ok := os.read_entire_file(filepath, context.allocator)
 	if !ok {
 		// could not read file
