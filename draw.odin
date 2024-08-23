@@ -43,6 +43,76 @@ draw_edit_map_mode :: proc(game_state: ^GameState, texture_map: ^map[string]rl.T
 		f32(TEXTURE_WIDTH / 6),
 		rl.Color{0, 0, 255, 100},
 	)
+
+	// Pause Menu
+	if game_state.is_paused {
+		horizontalOffset: i32 = -WINDOW_WIDTH / 2
+		rectangleColors := [3]rl.Color{rl.RAYWHITE, rl.RAYWHITE, rl.RAYWHITE}
+		rectangleColors[game_state.menu_index] = rl.RED
+
+		rectanglePosY: i32 = WINDOW_HEIGHT / 4
+		rectangleHeight: i32 = WINDOW_HEIGHT / 2
+		titlePadding: i32 = rectangleHeight / 7
+		optionPadding: i32 = titlePadding / 2
+		titleFont: i32 = titlePadding
+		optionFont: i32 = optionPadding
+
+		// Draw the menu
+		rl.DrawRectangle(
+			horizontalOffset + WINDOW_WIDTH / 4,
+			rectanglePosY,
+			WINDOW_WIDTH / 2,
+			rectangleHeight,
+			rl.Fade(rl.BLACK, 0.8),
+		)
+
+		rl.DrawRectangleLines(
+			horizontalOffset + WINDOW_WIDTH / 4,
+			rectanglePosY,
+			WINDOW_WIDTH / 2,
+			rectangleHeight,
+			rl.BLACK,
+		)
+
+		textWidth := rl.MeasureText("TILE EDITOR", titleFont)
+		rl.DrawText(
+			"TILE EDITOR",
+			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
+			rectanglePosY + titlePadding,
+			titleFont,
+			rl.RED,
+		)
+
+		optionsStartPosY := rectanglePosY + titlePadding * 3
+
+		// Draw the options
+		textWidth = rl.MeasureText("Resume", optionFont)
+		rl.DrawText(
+			"Resume",
+			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
+			optionsStartPosY,
+			optionFont,
+			rectangleColors[0],
+		)
+
+		textWidth = rl.MeasureText("Save and Exit", optionFont)
+		rl.DrawText(
+			"Save and Exit",
+			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
+			optionsStartPosY + optionPadding * 2,
+			optionFont,
+			rectangleColors[1],
+		)
+
+		textWidth = rl.MeasureText("Discard and Exit", optionFont)
+		rl.DrawText(
+			"Discard and Exit",
+			horizontalOffset + WINDOW_WIDTH / 2 - textWidth / 2,
+			optionsStartPosY + optionPadding * 4,
+			optionFont,
+			rectangleColors[2],
+		)
+	}
 }
 
 draw_main_menu :: proc(game_state: ^GameState) {

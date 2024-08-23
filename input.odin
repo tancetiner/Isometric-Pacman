@@ -126,10 +126,39 @@ handle_input_play_game :: proc(
 handle_input_edit_map :: proc(game_state: ^GameState, camera: ^rl.Camera2D) {
 	using rl.KeyboardKey
 
-	// Go back to main menu
+	// Pause menu logic
+	if game_state.is_paused {
+		idx := game_state.menu_index
+		if rl.IsKeyPressed(.DOWN) || rl.IsKeyPressed(.S) && idx < 2 do idx += 1
+		if rl.IsKeyPressed(.UP) || rl.IsKeyPressed(.W) && idx > 0 do idx -= 1
+		if rl.IsKeyPressed(.KP_ENTER) || rl.IsKeyPressed(.ENTER) || rl.IsKeyPressed(.SPACE) {
+			switch idx {
+			case 0:
+				// Resume game
+				game_state.is_paused = false
+			case 1:
+				// Save and exit
+				write_map(game_state, "assets/map.txt")
+				game_state.is_paused = false
+				game_state.menu_index = 0
+				game_state.mode = GameMode.MainMenu
+			case 2:
+				// Discard and exit
+				read_map(game_state, "assets/map.txt")
+				game_state.is_paused = false
+				game_state.menu_index = 0
+				game_state.mode = GameMode.MainMenu
+			}
+		}
+
+		if idx >= 0 && idx <= 2 do game_state.menu_index = idx
+		return
+	}
+
+	// Pause the edit map mode
 	if rl.IsKeyPressed(.ESCAPE) {
-		write_map(game_state, "assets/map.txt")
-		game_state.mode = GameMode.MainMenu
+		game_state.menu_index = 0
+		game_state.is_paused = true
 	}
 
 	// Map scrolling
