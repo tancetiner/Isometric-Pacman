@@ -330,12 +330,24 @@ draw_normal_mode :: proc(
 	}
 
 	// Render Score
+	horizontalOffset: i32 = -CAMERA_HORIZONTAL_OFFSET
+	verticalOffset: i32 = -CAMERA_VERTICAL_OFFSET
 	text := strings.concatenate({"Score: ", int_to_string(game_state.score)})
-	// text := strings.concatenate({"Score: "})
 	textC := strings.unsafe_string_to_cstring(text)
-	// textC := f32_to_cstring(game_state.counter / 60)
-	textWidth := rl.MeasureText(textC, 20)
-	rl.DrawText(textC, WINDOW_WIDTH / 2 - textWidth - 10, 10, 20, rl.BLACK)
+	textWidth := rl.MeasureText(textC, 30)
+	rl.DrawText(
+		textC,
+		horizontalOffset + WINDOW_WIDTH - textWidth - 10,
+		verticalOffset + 10,
+		30,
+		rl.BLACK,
+	)
+
+	// Render Score Coefficient
+	text = strings.concatenate({"x", int_to_string(game_state.score_coefficient)})
+	textC = strings.unsafe_string_to_cstring(text)
+	// textWidth = rl.MeasureText(textC, 30)
+	rl.DrawText(textC, horizontalOffset + 10, verticalOffset + 10, 30, rl.BLACK)
 
 	// Pause Menu
 	if game_state.is_paused {
